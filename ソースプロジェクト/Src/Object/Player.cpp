@@ -211,7 +211,7 @@ void Player::UpdateMove(void)
 	if (IsMove(moveVec_))
 	{		
 		//カメラ角度分設定する
-		VECTOR cameraAngles = SceneManager::GetInstance().GetCamera()->GetAngles();
+		VECTOR cameraAngles = camera_->GetAngles();
 		MATRIX cameraMatY = MGetRotY(cameraAngles.y);
 		moveVec_ = VTransform(moveVec_, cameraMatY);
 
@@ -321,57 +321,6 @@ void Player::SetRotation(void)
 
 	//行列を使用してモデルの角度を設定
 	MV1SetRotationMatrix(playermodel_, mat);
-}
-
-void Player::DrawDebug(void)
-{
-	DrawFormatString(0, 260, 0xffffff,
-		"移動ベクトルの角度(弧度法)：(X,Y,Z) = (%1.2lf %1.2lf, %1.2lf)",
-		moveVecRad_.x, moveVecRad_.y, moveVecRad_.z);
-
-	DrawFormatString(0, 300, 0xffffff,
-		"移動ベクトルの角度(度数法)：(X,Y,Z) = (%1.01f %1.01f, %1.01f)",
-		moveVecRad_.x * 180 / DX_PI_F,
-		moveVecRad_.y * 180 / DX_PI_F,
-		moveVecRad_.z * 180 / DX_PI_F);
-
-	//デバッグ文字
-	DrawFormatString(0, 20, 0xffff00,
-		"モデルの回転値(弧度法)：\n(X,Y,Z) = (%1.2lf,%1.2lf,%1.2lf)", rot_.x, rot_.y, rot_.z);
-
-	DrawFormatString(0, 60, 0xffff00,
-		"モデルの回転値(度数法)：\n(X,Y,Z) = (%1.0lf,%1.0lf,%1.0lf)",
-		rot_.x * 180 / DX_PI_F,
-		rot_.y * 180 / DX_PI_F,
-		rot_.z * 180 / DX_PI_F);
-
-	//モデルの角度の補正をなくした角度
-	const float INIT_MODEL_ROT = DX_PI_F / 2;
-	float noOffsetRotY = rot_.y + INIT_MODEL_ROT;
-	DrawFormatString(0, 120, 0x00ff00,
-		"モデルの回転値(弧度法)(モデルの方向補正なし)：\n(X,Y,Z)=(%1.2lf,%1.2lf,%1.2lf)",
-		rot_.x,
-		noOffsetRotY,
-		rot_.z);
-
-	DrawFormatString(0, 160, 0x00ff00,
-		"モデルの回転値(度数法)(モデルの方向補正なし)：\n(X,Y,Z)=(%1.0lf,%1.0lf,%1.0lf)",
-		rot_.x * 180 / DX_PI_F,
-		noOffsetRotY * 180 * DX_PI_F,
-		rot_.z * 180 / DX_PI_F);
-
-	//モデルの移動方向
-	if (IsMove(moveVec_)) {
-		//移動ベクトルを正規化
-		VECTOR debugMoveVec = VNorm(moveVec_);
-
-		//線の長さを設定
-		constexpr float DEBUG_MOVE_LINE_LENGTH = 100.0f;
-		debugMoveVec = VScale(debugMoveVec, DEBUG_MOVE_LINE_LENGTH);
-
-		//線の終端座標を設定
-		VECTOR debugMoveLineEndPos = VAdd(playerpos_, debugMoveVec);
-	}
 }
 
 float Player::GetDeltaTime()

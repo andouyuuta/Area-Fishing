@@ -21,9 +21,19 @@ Stage& Stage::GetInstance(void)
 
 Stage::Stage(void)
 {
-	FallSoundHundle_ = -1, RiverSoundHundle_ = -1, SoundPos = { 0.0f,0.0f,0.0f }, background_ = -1, backgroundpos_ = { 0.0f,0.0f,0.0f },
-		envSoundHundle_ = -1, stagemodel_ = -1, stagepos_ = { 0.0f,0.0f,0.0f, }, watermodel_ = -1, waterpos_ = { 0.0f,0.0f,0.0f },
-		windmillmodel_ = -1, windmillpos_ = { 0.0,0.0f,0.0f }, windmillrot_ = { 0.0f,0.0f,0.0f };
+	FallSoundHundle_ = -1;
+	RiverSoundHundle_ = -1;
+	SoundPos = { 0.0f,0.0f,0.0f }
+	; background_ = -1;
+	backgroundpos_ = { 0.0f,0.0f,0.0f };
+	envSoundHundle_ = -1;
+	stagemodel_ = -1;
+	stagepos_ = { 0.0f,0.0f,0.0f };
+	watermodel_ = -1;
+	waterpos_ = { 0.0f,0.0f,0.0f };
+	windmillmodel_ = -1;
+	windmillpos_ = { 0.0,0.0f,0.0f };
+	windmillrot_ = { 0.0f,0.0f,0.0f };
 }
 
 Stage::~Stage(void)

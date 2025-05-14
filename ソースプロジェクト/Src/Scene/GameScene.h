@@ -1,11 +1,10 @@
 #pragma once
 #include "SceneBase.h"
-class Grid;
+
 class Stage;
 class Camera;
 class Player;
 class Enemy;
-class Ball;
 class Rod;
 class Fish;
 class Dobber;
@@ -37,6 +36,7 @@ private:
 	bool clearflg;				//クリアしたか
 	EffekseerEffect* effect_;	
 	Water* water_;
+	Camera* camera_;
 	int SunHundle;				
 	void SetFish(int number);	//釣れた時のポジションやスケールを変更するメソッド
 	void Text(void);			//テキスト画面

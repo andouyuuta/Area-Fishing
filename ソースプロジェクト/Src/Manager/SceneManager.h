@@ -2,7 +2,6 @@
 #include <chrono>
 class SceneBase;
 class Fader;
-class Camera;
 class MiniCamera;
 
 class SceneManager
@@ -39,9 +38,6 @@ public:
 	// デルタタイムの取得
 	float GetDeltaTime(void) const;
 
-	// カメラの取得
-	Camera* GetCamera(void) const;
-
 private:
 
 	// 静的インスタンス
@@ -55,9 +51,6 @@ private:
 
 	// 各種シーン
 	SceneBase* scene_;
-
-	// カメラ
-	Camera* camera_;
 
 	// シーン遷移中判定
 	bool isSceneChanging_;

@@ -1,7 +1,6 @@
 #pragma once
 #include <DxLib.h>
 
-
 class Camera;
 
 class Player
@@ -28,6 +27,7 @@ public:
 	[[nodiscard]] int GetModel(void) const { return playermodel_; }
 	[[nodiscard]] PlayerMode GetCurrentMode()const { return currentMode_; }
 	void SetCurrentMode(PlayerMode mode) { currentMode_ = mode; }
+	void SetCamera(Camera* camera) { camera_ = camera; }
 private:
 	// 静的インスタンス
 	static Player* instance_;
@@ -84,12 +84,11 @@ private:
 	bool IsMove(const VECTOR _moveVec);
 	//回転設定
 	void SetRotation(void);
-	//デバッグ文字描画
-	void DrawDebug(void);
 	//回転処理
 	void UpdateRotation(void);
-	void StageCollision(void);
 	float GetDeltaTime();
 	//キーが押されているか
 	bool IsAnyKeyPressed();
+
+	Camera* camera_ = nullptr;
 };

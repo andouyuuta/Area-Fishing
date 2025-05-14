@@ -4,7 +4,6 @@
 #include "../Utility/Utility.h"
 #include"../Object/Player.h"
 #include"../Object/Rod.h"
-#include"../Object/Rod.h"
 
 Camera::Camera(void)
 {
@@ -163,7 +162,7 @@ void Camera::FirstCamera(void)
 	mat = MMult(mat, matRotY);
 
 	// プレイヤーからの相対位置を回転
-	VECTOR localPos = VTransform(localPosFromThirdPlayer_, mat);
+	VECTOR localPos = VTransform(localPosFromFirstPlayer_, mat);
 
 	// プレイヤーの位置を取得（仮の関数）
 	VECTOR playerPos = Player::GetInstance().GetPos(); // 実際のプレイヤー位置取得関数に置き換えてください

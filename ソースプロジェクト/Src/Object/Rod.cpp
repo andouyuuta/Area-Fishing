@@ -1,4 +1,5 @@
 #include "../Manager/InputManager.h"
+#include "../Manager/Camera.h"
 #include "Player.h"
 #include "Rod.h"
 #include "Dobber.h"
@@ -97,7 +98,7 @@ void Rod::Update(void)
 			rodanimFlg = false;
 
 			//プレイヤーの向きを取得して竿の角度を設定
-			rot_ = player.GetAngle();
+			rot_ = camera_->GetAngles();
 			MV1SetRotationXYZ(rodmodel_, rot_);
 
 			//竿の初期位置をセット
@@ -129,7 +130,6 @@ void Rod::Update(void)
 	//竿が表示されていたら更新処理を行う
 	if (rodFlg) {
 		HandleInput();
-		UpdateAnimation();
 		RodProcess();
 	}
 }
@@ -179,15 +179,11 @@ void Rod::ThrowUpdate(void)
 		{
 			currentthrowAnimTime_ = 0.0f;
 			throwanimFlg = false;
-
-			// アニメーション終了時のモデル回転を更新
 			MV1SetRotationXYZ(rodmodel_, rot_);
+
+			ChangeState(STATE::AWASE); // ← こうすることで状態を明確に遷移
 		}
 	}
-}
-
-void Rod::AwaseUpdate(void)
-{
 }
 
 void Rod::Draw(void)
@@ -215,7 +211,6 @@ void Rod::UpdateAnimation(void)
 		ThrowUpdate();
 		break;
 	case Rod::STATE::AWASE:
-		AwaseUpdate();
 		break;
 	default:
 		break;
@@ -246,20 +241,10 @@ void Rod::RodProcess(void)
 
 void Rod::RodMove(void)
 {
-	//入力制御取得
-	InputManager& ins = InputManager::GetInstance();
+	if (!camera_) return; // 安全対策
 
-	//回転スピードをデグリー→ラジアンに変更
-	float rotPow = ROT_SPEED_DEG * DX_PI_F / 180.0f;
-
-	//上下左右キーでカメラの座標を変更する
-	if (ins.IsNew(KEY_INPUT_RIGHT)) { rot_.y += rotPow; }
-	if (ins.IsNew(KEY_INPUT_LEFT)) { rot_.y -= rotPow; }
-
-	if (rot_.y >= 360.0f)
-	{
-		rot_.y -= 360.0f;
-	}
+	//カメラの角度を取得
+	rot_ = camera_->GetAngles();
 
 	VECTOR playerpos_ = Player::GetInstance().GetPos();
 
@@ -378,7 +363,7 @@ void Rod::ToggleRod()
 		currentAnimTime_ = 0.0f;
 
 		//プレイヤーの向きを取得して竿に設定する
-		rot_ = player.GetAngle();
+		rot_ =camera_->GetAngles();
 		MV1SetRotationXYZ(rodmodel_, rot_);
 
 		//竿の出しアニメーションを設定

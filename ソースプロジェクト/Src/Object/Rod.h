@@ -2,6 +2,7 @@
 #include <DxLib.h>
 
 class Player;
+class Camera;
 
 class Rod
 {
@@ -21,16 +22,13 @@ public:
 	~Rod(void);
 	void Init(void);		//初期化処理
 	void Update(void);		//更新処理
-	void SpawnUpdate(void);
-	void KamaeUpdate(void);
-	void ThrowUpdate(void);
-	void AwaseUpdate(void);
 	void Draw(void);		//描画処理
 	void Release(void);		//解放処理
 	[[nodiscard]] VECTOR GetAngle(void) const { return rot_; }	//方向の取得
 	[[nodiscard]] bool GetFlg() const { return rodFlg; }
 	[[nodiscard]] float GetRotY() const { return rot_.y; }
 	void Reset(void);
+	void SetCamera(Camera* camera) { camera_ = camera; }
 private:
 	// 静的インスタンス
 	static Rod* instance_;
@@ -67,5 +65,10 @@ private:
 	void HandleInput();						
 	void UpdateRodmodel()const;
 	void ToggleRod();
+	void SpawnUpdate(void);
+	void KamaeUpdate(void);
+	void ThrowUpdate(void);
+
+	Camera* camera_;
 };
 

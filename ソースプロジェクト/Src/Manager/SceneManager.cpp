@@ -3,7 +3,6 @@
 #include "../Common/Fader.h"
 #include "../Scene/GameScene.h"
 #include "../Scene/TitleScene.h"
-#include "Camera.h"
 #include "SceneManager.h"
 
 SceneManager* SceneManager::instance_ = nullptr;
@@ -31,11 +30,7 @@ void SceneManager::Init(void)
 	fader_ = new Fader();
 	fader_->Init();
 
-	// カメラ
-	camera_ = new Camera();
-	camera_->Init();
-
-	scene_ = new GameScene();
+	scene_ = new TitleScene();
 	scene_->Init();
 
 	isSceneChanging_ = false;
@@ -48,11 +43,6 @@ void SceneManager::Init(void)
 
 	// 初期シーンの設定
 	DoChangeScene(SCENE_ID::TITLE);
-
-	SunHundle = CreateDirLightHandle({ 10.00f,50.0f,10.0f });
-	SunHundle = CreateDirLightHandle({ -100.00f,10.0f,-100.0f });
-	SunHundle = CreateDirLightHandle({ 130.00f,30.0f,30.0f });
-
 }
 
 void SceneManager::Init3D(void)
@@ -93,21 +83,16 @@ void SceneManager::Update(void)
 	else
 	{
 		scene_->Update();
-	}	
-
-	// カメラ更新
-	camera_->Update();
+	}
 }
 
 void SceneManager::Draw(void)
-{	
+{
 	// 描画
 	scene_->Draw();
 
 	// 暗転・明転
 	fader_->Draw();
-
-	camera_->Draw();
 }
 
 void SceneManager::Release(void)
@@ -117,9 +102,6 @@ void SceneManager::Release(void)
 	delete scene_;
 
 	delete fader_;
-
-	camera_->Release();
-	delete camera_;
 }
 
 void SceneManager::ChangeScene(SCENE_ID nextId)
@@ -141,11 +123,6 @@ float SceneManager::GetDeltaTime(void) const
 	return deltaTime_;
 }
 
-Camera* SceneManager::GetCamera(void) const
-{
-	return camera_;
-}
-
 SceneManager::SceneManager(void)
 {
 
@@ -159,9 +136,6 @@ SceneManager::SceneManager(void)
 
 	// デルタタイム
 	deltaTime_ = 1.0f / 60.0f;
-
-	camera_ = nullptr;
-
 }
 
 SceneManager::~SceneManager(void)

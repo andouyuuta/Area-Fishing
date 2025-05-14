@@ -32,13 +32,23 @@ void GameScene::Init(void)
 	fishonimg = LoadGraph("Data/Image/FishOn.png");
 	rodspawnimg = LoadGraph("Data/Image/RodSpawn.png");
 	ukispawnimg = LoadGraph("Data/Image/UkiSpawn.png");
+
+	SunHundle = CreateDirLightHandle({ 10.00f,50.0f,10.0f });
+	SunHundle = CreateDirLightHandle({ -100.00f,10.0f,-100.0f });
+	SunHundle = CreateDirLightHandle({ 130.00f,30.0f,30.0f });
+
+
 	// ‰Šú‰»ˆ—
+	camera_ = new Camera();
+	camera_->Init();
 	Stage::CreateInstance();
 	Stage::GetInstance().Init();
 	Player::CreateInstance();
 	Player::GetInstance().Init();
+	Player::GetInstance().SetCamera(camera_);
 	Rod::CreateInstance();
 	Rod::GetInstance().Init();
+	Rod::GetInstance().SetCamera(camera_);
 	FishManager::CreateInstance();
 	FishManager::GetInstance().Init();
 	Dobber::CreateInstance();
@@ -50,11 +60,11 @@ void GameScene::Init(void)
 	Gauge::CreateInstance();
 	Gauge::GetInstance().Init();
 	SceneManager& sceneManager = SceneManager::GetInstance();
-	Camera* camera = sceneManager.GetCamera();
 }
 
 void GameScene::Update(void)
 {
+	camera_->Update();
 	if (Dobber::GetInstance().GetfishingFlg())
 	{
 		SetFish(FishManager::GetInstance().GetClosestFishNumber());
@@ -125,10 +135,13 @@ void GameScene::Release(void)
 	Rod::GetInstance().Release();
 	FishManager::GetInstance().Release();
 	Dobber::GetInstance().Release();
+	Gauge::GetInstance().Release();
 	effect_->Release();
 	delete effect_;
 	water_->Release();
 	delete water_;
+	camera_->Release();
+	delete camera_;
 	DeleteGraph(backgroundimg);
 }
 

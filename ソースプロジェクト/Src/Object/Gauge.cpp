@@ -97,7 +97,7 @@ void Gauge::UpdateGauge(void)
 
 void Gauge::DrawGauge(int x, int y, int width, int height, float value)
 {
-    if (gaugeflg = true) {
+    if (gaugeflg) {
         DrawExtendGraph(x, y, x + width, y + height, gagugebackhandle, true);
 
         //ゲージの値部分の高さを計算(ゲージが減ると短くなる)
@@ -105,7 +105,7 @@ void Gauge::DrawGauge(int x, int y, int width, int height, float value)
         int barY = y + (height - barHeight);  //上からバーが減るように調整
 
         //ゲージの色設定
-        int red = (255 * gaugeValue) / maxValue;
+        int red = (255 * value) / maxValue;;
         int green = 255 - red;
 
         //ゲージの値部分を描画(伸縮表示)
