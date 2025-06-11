@@ -135,3 +135,15 @@ void Application::DrawFrameRate()
 {
 	DrawFormatString(0, 0, GetColor(0, 0, 0), "FPS[%.2f", frameRate);
 }
+
+float Application::GetDeltaTime()
+{
+	// 現在のFPSを取得
+	float fps = GetFPS();
+
+	// FPSが0の場合は安全に1を返す
+	if (fps == 0.0f) return 1.0f;
+
+	// デルタタイムをFPSから逆算
+	return 1.0f / fps;
+}

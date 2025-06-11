@@ -11,27 +11,18 @@ public:
 	enum CameraMode {
 		THIRD_PERSON,
 		FIRST_PERSON,
-		TEST_,
 	};
 
 	CameraMode currentMode_;
 
-	// ƒJƒƒ‰‚Ì‚‚³
-	static constexpr float HEIGHT = 200.0f;
-
-	// ’Ç]‘ÎÛ‚©‚çƒJƒƒ‰‚Ü‚Å‚Ì‹——£
-	static constexpr float DIS_FOLLOW2CAMERA = 400.0f;
-
-	static constexpr float ROT_SPEED_DEG = 1.0f;
 
 	Camera(void);
 	~Camera(void);
 
-	void Init(void);
+	void Init(Rod* rod, Player* player);
 	void Update(void);
 	void Draw(void);
 	void Release(void);
-
 
 	//ƒJƒƒ‰‰ñ“]Šp“aæ“¾
 	VECTOR GetAngles(void);
@@ -69,5 +60,8 @@ private:
 
 	void ThirdCamera(void);
 	void FirstCamera(void);
+
+	Player* player_;
+	Rod* rod_;
 };
 

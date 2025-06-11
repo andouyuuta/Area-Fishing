@@ -1,68 +1,151 @@
 #include <string>
-#include <DxLib.h>
 #include "../Utility/Utility.h"
 #include "../Manager/SceneManager.h"
 #include "../Manager/InputManager.h"
 #include "../Manager/Camera.h"
 #include "TitleScene.h"
 
-// コンストラクタ
-TitleScene::TitleScene(void)
-	: TitleHundle_ (-1), mainSoundHundle_(-1), titlePos_{0.0f,0.0f,0.0f}, titleimg(-1),fontHandle(-1),textboximg(-1)
+namespace
 {
+	constexpr int MANUAL_PAGE_COUNT = 5;
+	constexpr int SELECT_COUNT = 3;
+
+	// UI位置・サイズ
+	constexpr int TITLE_POS_X = 0;
+	constexpr int TITLE_POS_Y = 0;
+
+	constexpr int TITLE_LOGO_POS_X = 160;
+	constexpr int TITLE_LOGO_POS_Y = 10;
+
+	constexpr int SELECT_GUIDE_POS_X = 100;
+	constexpr int SELECT_GUIDE_POS_Y1 = 300;
+	constexpr int SELECT_GUIDE_POS_Y2 = 325;
+
+	constexpr int SELECT_TEXT_START_Y = 400;
+	constexpr int SELECT_TEXT_INTERVAL = 75;
+
+	constexpr int PAGE_TEXT_OFFSET_X = 70;
+	constexpr int PAGE_TEXT_OFFSET_Y = 30;
+
+	constexpr int PAGE_HINT_LEFT_X = 0;
+	constexpr int PAGE_HINT_LEFT_Y = 0;
+
+	constexpr int PAGE_HINT_RIGHT_OFFSET_X = 350;
+	constexpr int PAGE_HINT_RIGHT_Y = 0;
+
+	// 色
+	constexpr int COLOR_SELECTED_R = 255;
+	constexpr int COLOR_SELECTED_G = 0;
+	constexpr int COLOR_SELECTED_B = 0;
+
+	constexpr int COLOR_NORMAL_R = 0;
+	constexpr int COLOR_NORMAL_G = 0;
+	constexpr int COLOR_NORMAL_B = 0;
+
+	constexpr int FONT_SIZE_TITLE = 24;
+	constexpr int FONT_SIZE_MANUAL = 16;
+
+	// ファイルパス
+	constexpr const char* TITLE_IMAGE_PATH = "Data/Image/Title.png";
+	constexpr const char* TITLE_LOGO_IMAGE_PATH = "Data/Image/titlelogo.png";
+
+	constexpr const char* TEXTBOX_IMAGE_PATH = "Data/Image/textbox.png";
+	constexpr const char* SELECTTEXT_IMAGE_PATH = "Data/Image/selecttext.png";
+
+	constexpr const char* SOUND_PATH = "Data/Sound/download_c3cd42c09c.mp3";
+
+	constexpr const char* FONT_PATH = "Data/Font/Nikumaru.otf";
+	constexpr const char* FONT_NAME = "07にくまるフォント";
+
+	// 操作関連
+	constexpr const char* MANUAL_HINT = "←キー：戻る　　→キー：進む";
+	constexpr const char* MANUAL_HINT_RETURN = "ENTERキーでモード選択に戻る";
+	constexpr const char* SELECT_GUIDE_TEXT1 = "　↑↓キーで移動";
+	constexpr const char* SELECT_GUIDE_TEXT2 = "EnterキーでSelect";
+
+	// マニュアル表記
+	constexpr const char* MANUAL_IMAGE_PATHS[MANUAL_PAGE_COUNT] = {
+		"Data/Image/manual1-1.png",
+		"Data/Image/manual2-1.png",
+		"Data/Image/manual4-1.png",
+		"Data/Image/manual3-1.png",
+		"Data/Image/manual5-1.png"
+	};
+
+	// ページ表記
+	constexpr const char* MANUAL_PAGE_TEXT[MANUAL_PAGE_COUNT] = {
+		"１/５", "２/５", "３/５", "４/５", "５/５"
+	};
+
+	// メニュー選択
+	constexpr const char* MENU_TEXT[SELECT_COUNT] = {
+		"1. ゲームスタート",
+		"2. 操作設定",
+		"3. 終了"
+	};
+}
+
+// コンストラクタ
+TitleScene::TitleScene()
+	: titleImg_(-1),
+	titlePos_{ 0.0f, 0.0f, 0.0f },
+	selection_(0),
+	isSelect_(true),
+	isManual_(false),
+	manualSelect_(0),
+	mainSoundHandle_(-1),
+	fontHandle(-1),
+	textBoxImg_(-1),
+	selectTextImg_(-1)
+{
+	for (int& img : manualImage_) img = -1;
 }
 
 // デストラクタ
-TitleScene::~TitleScene(void) {}
+TitleScene::~TitleScene() {}
 
 // 初期化
-void TitleScene::Init(void)
+void TitleScene::Init()
 {
-	titleimg = LoadGraph("Data/Image/Title.png");
-	manualimage[0] = LoadGraph("Data/Image/manual1-1.png");
-	manualimage[1] = LoadGraph("Data/Image/manual2-1.png");
-	manualimage[2] = LoadGraph("Data/Image/manual4-1.png");
-	manualimage[3] = LoadGraph("Data/Image/manual3-1.png");
-	manualimage[4] = LoadGraph("Data/Image/manual5-1.png");
+	titleImg_ = LoadGraph(TITLE_IMAGE_PATH);
 
-	mainSoundHundle_ = LoadSoundMem("Data/Sound/download_c3cd42c09c.mp3");
+	for (int i = 0; i < MANUAL_PAGE_COUNT; ++i)
+	{
+		manualImage_[i] = LoadGraph(MANUAL_IMAGE_PATHS[i]);
+	}
 
-	textboximg = LoadGraph("Data/Image/textbox.png");
-	selecttextimg = LoadGraph("Data/Image/selecttext.png");
+	mainSoundHandle_ = LoadSoundMem(SOUND_PATH);
+	textBoxImg_ = LoadGraph(TEXTBOX_IMAGE_PATH);
+	selectTextImg_ = LoadGraph(SELECTTEXT_IMAGE_PATH);
 
-	AddFontResourceEx("Data/Font/Nikumaru.otf", FR_PRIVATE, NULL);
-
-	TitleHundle_ = LoadGraph("Data/Image/titlelogo.png");
+	AddFontResourceEx(FONT_PATH, FR_PRIVATE, NULL);
 }
 
 // 更新
-void TitleScene::Update(void)
+void TitleScene::Update()
 {
-	if (CheckSoundMem(mainSoundHundle_) == 0) {
-		PlaySoundMem(mainSoundHundle_, DX_PLAYTYPE_LOOP);
-	}
-	ChangeFont("07にくまるフォント");
-
-	// シーン遷移
 	InputManager& ins = InputManager::GetInstance();
 
-	UpdateSelect();		//モード選択画面の処理
+	if (CheckSoundMem(mainSoundHandle_) == 0)
+	{
+		PlaySoundMem(mainSoundHandle_, DX_PLAYTYPE_LOOP);
+	}
 
-	UpdateManual();		//操作説明の処理
+	ChangeFont(FONT_NAME);
 
-	// マウスの左クリックによる選択処理
-	if (ins.IsTrgDown(KEY_INPUT_RETURN)) {
-		switch (selection) {
+	if (isSelect_) UpdateSelect();
+	if (isManual_) UpdateManual();
+
+	if (ins.IsTrgDown(KEY_INPUT_RETURN))
+	{
+		switch (selection_)
+		{
 		case 0:
-			// ゲーム開始処理
 			SceneManager::GetInstance().ChangeScene(SceneManager::SCENE_ID::GAME);
 			break;
 		case 1:
-			//ENTERキーでモード選択画面に戻す
-			if (ins.IsTrgDown(KEY_INPUT_RETURN)) {
-				manualactive = !manualactive;
-				selectflg = true;
-			}
+			isManual_ = !isManual_;
+			isSelect_ = true;
 			break;
 		case 2:
 			DxLib_End();
@@ -72,145 +155,105 @@ void TitleScene::Update(void)
 }
 
 // 描画
-void TitleScene::Draw(void)
+void TitleScene::Draw()
 {
-	DrawGraph(0, 0, titleimg, true);
-	DrawGraph(160, 10, TitleHundle_, true);
-
-	//モード選択画面の描画
-	if (selectflg) {
-		DrawSelect();
-	}
-
-	// 操作説明の描画
-	if (manualactive) {
-		DrawManual();
-	}
+	if (isSelect_) DrawSelect();
+	if (isManual_) DrawManual();
 }
+
 
 // 解放
-void TitleScene::Release(void)
+void TitleScene::Release()
 {
-	// タイトルロゴ削除
-	DeleteGraph(TitleHundle_);
-	DeleteGraph(manualimage[0]);
-	DeleteGraph(manualimage[1]);
-	DeleteGraph(manualimage[2]);
-	DeleteGraph(manualimage[3]);
-	DeleteGraph(manualimage[4]);
-
-	DeleteSoundMem(mainSoundHundle_);
-	// 作成したフォントデータを削除する
-	//DeleteFontToHandle(fontHandle);
-	RemoveFontResourceEx("Data/Font/Nikumaru.otf", FR_PRIVATE, NULL);
+	for (int i = 0; i < MANUAL_PAGE_COUNT; ++i)
+	{
+		DeleteGraph(manualImage_[i]);
+	}
+	DeleteSoundMem(mainSoundHandle_);
+	RemoveFontResourceEx(FONT_PATH, FR_PRIVATE, NULL);
 }
 
-//アウトライン
-void TitleScene::OutLine(void)
+// メニュー選択更新
+void TitleScene::UpdateSelect()
 {
-	//Drawtext(100, 299, "　↑↓キーで移動", GetColor(0, 0, 0)); // 上
-	//Drawtext(100, 301, "　↑↓キーで移動", GetColor(0, 0, 0)); // 下
-	//Drawtext(99, 300, "　↑↓キーで移動", GetColor(0, 0, 0)); // 左
-	//Drawtext(101, 300, "　↑↓キーで移動", GetColor(0, 0, 0)); // 右	
-
-	//Drawtext(100, 324, "EnterキーでSelect", GetColor(0, 0, 0)); // 上
-	//Drawtext(100, 326, "EnterキーでSelect", GetColor(0, 0, 0)); // 下
-	//Drawtext(99, 325, "EnterキーでSelect", GetColor(0, 0, 0)); // 左
-	//Drawtext(101, 325, "EnterキーでSelect", GetColor(0, 0, 0)); // 右	
-
-	//Drawtext(100, 399, "1. ゲームスタート", GetColor(0, 0, 0)); // 上
-	//Drawtext(100, 401, "1. ゲームスタート", GetColor(0, 0, 0)); // 下
-	//Drawtext(99, 400, "1. ゲームスタート", GetColor(0, 0, 0)); // 左
-	//Drawtext(101, 400, "1. ゲームスタート", GetColor(0, 0, 0)); // 右	
-
-	//Drawtext(100, 474, "2. 操作設定", GetColor(0, 0, 0)); // 上
-	//Drawtext(100, 476, "2. 操作設定", GetColor(0, 0, 0)); // 下
-	//Drawtext(99, 475, "2. 操作設定", GetColor(0, 0, 0)); // 左
-	//Drawtext(101, 475, "2. 操作設定", GetColor(0, 0, 0)); // 右	
-
-	//Drawtext(100, 549, "3. 終了", GetColor(0, 0, 0)); // 上
-	//Drawtext(100, 551, "3. 終了", GetColor(0, 0, 0)); // 下
-	//Drawtext(99, 550, "3. 終了", GetColor(0, 0, 0)); // 左
-	//Drawtext(101, 550, "3. 終了", GetColor(0, 0, 0)); // 右	
-}
-
-
-void TitleScene::UpdateSelect(void)
-{
-	// シーン遷移
 	InputManager& ins = InputManager::GetInstance();
 
-	if (selectflg) {
-		if (ins.IsTrgDown(KEY_INPUT_DOWN)) {
-			selection = (selection + 1) % 3;
+	if (isSelect_)
+	{
+		if (ins.IsTrgDown(KEY_INPUT_DOWN))
+		{
+			selection_ = (selection_ + 1) % SELECT_COUNT;
 		}
-		else if (ins.IsTrgDown(KEY_INPUT_UP)) {
-			selection = (selection + 2) % 3;
+		else if (ins.IsTrgDown(KEY_INPUT_UP))
+		{
+			selection_ = (selection_ + SELECT_COUNT - 1) % SELECT_COUNT;
 		}
 	}
 }
 
-void TitleScene::DrawSelect(void)
+// メニュー選択描画
+void TitleScene::DrawSelect()
 {
-	DrawExtendGraph(60, 270, 350, 360, selecttextimg, true);
-	DrawExtendGraph(60, 380, 350, 590, textboximg, true);
+	DrawGraph(TITLE_POS_X, TITLE_POS_Y, titleImg_, true);
 
-	SetFontSize(24);
+	SetFontSize(FONT_SIZE_TITLE);
 
-	DrawString(100, 300, "　↑↓キーで移動", GetColor(255, 0, 0));
-	DrawString(100, 325, "EnterキーでSelect", GetColor(255, 0, 0));
+	DrawString(SELECT_GUIDE_POS_X, SELECT_GUIDE_POS_Y1, SELECT_GUIDE_TEXT1, GetColor(COLOR_SELECTED_R, COLOR_SELECTED_G, COLOR_SELECTED_B));
+	DrawString(SELECT_GUIDE_POS_X, SELECT_GUIDE_POS_Y2, SELECT_GUIDE_TEXT2, GetColor(COLOR_SELECTED_R, COLOR_SELECTED_G, COLOR_SELECTED_B));
 
-	DrawString(100, 400, "1. ゲームスタート", selection == 0 ? GetColor(255, 0, 0) : GetColor(0, 0, 0));
-	DrawString(100, 475, "2. 操作設定", selection == 1 ? GetColor(255, 0, 0) : GetColor(0, 0, 0));
-	DrawString(100, 550, "3. 終了", selection == 2 ? GetColor(255, 0, 0) : GetColor(0, 0, 0));
+	for (int i = 0; i < SELECT_COUNT; ++i)
+	{
+		int y = SELECT_TEXT_START_Y + i * SELECT_TEXT_INTERVAL;
+		int color = (selection_ == i)
+			? GetColor(COLOR_SELECTED_R, COLOR_SELECTED_G, COLOR_SELECTED_B)
+			: GetColor(COLOR_NORMAL_R, COLOR_NORMAL_G, COLOR_NORMAL_B);
+		DrawString(SELECT_GUIDE_POS_X, y, MENU_TEXT[i], color);
+	}
+
 }
 
-void TitleScene::UpdateManual(void)
+// 操作説明更新
+void TitleScene::UpdateManual()
 {
-	// シーン遷移
 	InputManager& ins = InputManager::GetInstance();
 
-	if (manualactive) {
-		if (ins.IsTrgDown(KEY_INPUT_RIGHT)) {
-			manualselect = (manualselect + 1) % 5;
+	if (isManual_)
+	{
+		if (ins.IsTrgDown(KEY_INPUT_RIGHT))
+		{
+			manualSelect_ = (manualSelect_ + 1) % MANUAL_PAGE_COUNT;
 		}
-		else if (ins.IsTrgDown(KEY_INPUT_LEFT)) {
-			manualselect = (manualselect + 4) % 5;
+		else if (ins.IsTrgDown(KEY_INPUT_LEFT))
+		{
+			manualSelect_ = (manualSelect_ + MANUAL_PAGE_COUNT - 1) % MANUAL_PAGE_COUNT;
 		}
 	}
 }
 
-void TitleScene::DrawManual(void)
+// 操作説明描画
+void TitleScene::DrawManual()
 {
-	SetFontSize(16);
-	switch (manualselect) {
-	case 0:
-		DrawGraph(0, 0, manualimage[0], true);
-		DrawString(Application::SCREEN_SIZE_X - 70, Application::SCREEN_SIZE_Y - 30, "１/５", GetColor(0, 0, 0));
-		break;
-	case 1:
-		DrawGraph(0, 0, manualimage[1], true);
-		DrawString(Application::SCREEN_SIZE_X - 70, Application::SCREEN_SIZE_Y - 30, "２/５", GetColor(0, 0, 0));
-		break;
-	case 2:
-		DrawGraph(0, 0, manualimage[2], true);
-		DrawString(Application::SCREEN_SIZE_X - 70, Application::SCREEN_SIZE_Y - 30, "３/５", GetColor(0, 0, 0));
-		break;
-	case 3:
-		DrawGraph(0, 0, manualimage[3], true);
-		DrawString(Application::SCREEN_SIZE_X - 70, Application::SCREEN_SIZE_Y - 30, "４/５", GetColor(0, 0, 0));
-		break;
-	case 4:
-		DrawGraph(0, 0, manualimage[4], true);
-		DrawString(Application::SCREEN_SIZE_X - 70, Application::SCREEN_SIZE_Y - 30, "５/５", GetColor(0, 0, 0));
-		break;
-	}
-	DrawString(0, 0, "←キー：戻る　　→キー：進む", GetColor(0, 0, 0));;
-	DrawString(Application::SCREEN_SIZE_X - 250, 0, "ENTERキーでモード選択に戻る", GetColor(0, 0, 0));
+	DrawGraph(0, 0, manualImage_[manualSelect_], true);
+
+	DrawString(
+		Application::SCREEN_SIZE_X - PAGE_TEXT_OFFSET_X,
+		Application::SCREEN_SIZE_Y - PAGE_TEXT_OFFSET_Y,
+		MANUAL_PAGE_TEXT[manualSelect_],
+		GetColor(COLOR_NORMAL_R, COLOR_NORMAL_G, COLOR_NORMAL_B)
+	);
+
+	DrawString(PAGE_HINT_LEFT_X, PAGE_HINT_LEFT_Y, MANUAL_HINT, GetColor(COLOR_NORMAL_R, COLOR_NORMAL_G, COLOR_NORMAL_B));
+
+	DrawString(
+		Application::SCREEN_SIZE_X - PAGE_HINT_RIGHT_OFFSET_X,
+		PAGE_HINT_RIGHT_Y,
+		MANUAL_HINT_RETURN,
+		GetColor(COLOR_NORMAL_R, COLOR_NORMAL_G, COLOR_NORMAL_B)
+	);
 }
 
-void TitleScene::Drawtext(int x, int y, const char* text, int color)
+// フォント描画用
+void TitleScene::DrawText(int x, int y, const char* text, int color)
 {
-
 	DrawStringToHandle(x, y, text, color, fontHandle);
 }

@@ -1,4 +1,4 @@
-#include "Fish.h"
+ï»¿#include "Fish.h"
 #include "FishManager.h"
 #include "Player.h"
 #include "Dobber.h"
@@ -10,277 +10,344 @@
 
 namespace
 {
-    constexpr float ANIM_SPEED = 0.2f;
-    constexpr float ROTATESPEED = 0.05f;
-    constexpr float MAX_INTERVAL = 3.0f * 60;
-    // ‹›‚Ì”z’u”ÍˆÍ‚ğİ’è
-    constexpr float minX = -5500.0f;
-    constexpr float maxX = 5500.0f;
-    constexpr float minY = -350.0f;
-    constexpr float maxY = -350.0f;  // ‹›‚ÌyÀ•W”ÍˆÍ
-    constexpr float minZ = -8000.0f;
-    constexpr float maxZ = 13000.0f;
-    constexpr float MinX = -2500.0f;
-    constexpr float MaxX = 2500.0f;
-    constexpr float MinY = -340.0f;
-    constexpr float MaxY = -350.0f;  // ‹›‚ÌyÀ•W”ÍˆÍ
-    constexpr float MinZ = -2800.0f;
-    constexpr float MaxZ = 3300.0f;
+    // ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ãƒ»å›è»¢
+    constexpr float ANIM_SPEED = 0.2f;                        // ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³é€Ÿåº¦
+    constexpr float ROTATE_SPEED = 0.05f;                     // é­šã®å›è»¢é€Ÿåº¦
+    constexpr float ROTATION_SPEED = 0.1f;                    // å‘ãå¤‰æ›´ã®è£œé–“é€Ÿåº¦
+    constexpr float ANGLE_CORRECTION_RAD = DX_PI_F / 2.0f;    // ãƒ©ã‚¸ã‚¢ãƒ³è£œæ­£
+    constexpr float ROTATE_THRESHOLD = 0.01f;                 // å›è»¢è£œæ­£ã®é–¾å€¤
+    constexpr float FULL_ROTATION_DEG = 2.0f * DX_PI_F;       // 360åº¦ï¼ˆãƒ©ã‚¸ã‚¢ãƒ³ï¼‰
+    constexpr float HALF_ROTATION_DEG = 180.0f;               // 180åº¦ï¼ˆãƒ‡ã‚°ãƒªãƒ¼ï¼‰
+
+    // ã‚¿ã‚¤ãƒŸãƒ³ã‚°é–¢é€£
+    constexpr float MAX_INTERVAL = 3.0f * 60;                 // æœ€å¤§å‡ºç¾é–“éš”
+    constexpr float DEFAULT_INTERVAL = 60.0f;                 // ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆã®è¡Œå‹•é–“éš”
+    constexpr float TIMER_INCREMENT = 1.0f;                   // ã‚¿ã‚¤ãƒãƒ¼åŠ ç®—é‡
+    constexpr float CHANGE_DIRECTION_INTERVAL_MIN = 50.0f;    // å‘ãå¤‰æ›´ã®æœ€å°é–“éš”
+    constexpr float CHANGE_DIRECTION_INTERVAL_MAX = 200.0f;   // å‘ãå¤‰æ›´ã®æœ€å¤§é–“éš”
+
+    // é­šã®æŒ™å‹•
+    constexpr float FISH_MOVE_SPEED = 2.0f;                   // åŸºæœ¬ç§»å‹•é€Ÿåº¦
+    constexpr float SWIM_SPEED_MIN = 1.5f;                    // æœ€å°éŠæ³³é€Ÿåº¦
+    constexpr float SWIM_SPEED_MAX = 3.0f;                    // æœ€å¤§éŠæ³³é€Ÿåº¦
+    constexpr float CLOSER = 7.0f;                            // ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ã«è¿‘ã¥ãã¨ãã®é€Ÿåº¦
+    constexpr float LEAVE = 2.0f;                             // ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ã‹ã‚‰é›¢ã‚Œã‚‹é€Ÿåº¦
+
+    // é­šã®ã‚¹ã‚±ãƒ¼ãƒ«ãƒ»åˆæœŸä½ç½®
+    constexpr VECTOR DEFAULT_FISH_SCALE = { 0.25f, 0.25f, 0.25f }; // é­šã®ã‚¹ã‚±ãƒ¼ãƒ«
+    constexpr float GROUND_Y = -165.0f;                            // åœ°é¢Yåº§æ¨™
+    
+    // åˆæœŸæ–¹å‘ãƒ™ã‚¯ãƒˆãƒ«ç¯„å›²
+    constexpr float DIRECTION_XZ_MIN = -100.0f;
+    constexpr float DIRECTION_XZ_MAX = 100.0f;
+    constexpr float DIRECTION_Y_MIN = -0.5f;
+    constexpr float DIRECTION_Y_MAX = 0.5f;
+   
+    // é­šã®å‡ºç¾ç¯„å›²
+    constexpr float SPAWN_RANGE_MIN_X = -5500.0f;
+    constexpr float SPAWN_RANGE_MAX_X = 5500.0f;
+    constexpr float SPAWN_RANGE_MIN_Y = -350.0f;
+    constexpr float SPAWN_RANGE_MAX_Y = -350.0f;
+    constexpr float SPAWN_RANGE_MIN_Z = -8000.0f;
+    constexpr float SPAWN_RANGE_MAX_Z = 13000.0f;
 }
 
-Fish::Fish() 
-    :FishPos{0.0f,0.0f,0.0f}, PrevFishPos{0.0f,0.0f,0.0f}, 
-      fishmodel(-1), fishInterval(0.0f), intervalcountflg(false), 
-      interval(60.0f), leftclickpressflg(false), fishscale(0.25f), angle(0.0f), direction(1), fishnumber(0),
-      animAttachNo_(0), animTotalTime_(0.0f), currentAnimTime_(0.0f),
-      swimTimer(0.0f), currentDirection(VGet(0.0f, 0.0f, 0.0f)), changeDirectionInterval(0.0f),
-      type_(FishType::None), currentAngleY(0.0f)
+Fish::Fish(void)
+    :fishPos_{ 0.0f, 0.0f, 0.0f },
+    prevFishPos_{ 0.0f, 0.0f, 0.0f },
+    fishModel_(-1),
+    fishInterval_(0.0f),
+    isIntervalCount(false),
+    timeToMove(DEFAULT_INTERVAL),
+    isLeftClickPress(false),
+    fishScale_(DEFAULT_FISH_SCALE),
+    angle_(0.0f),
+    direction_(1),
+    fishNumber_(0),
+    animAttachNo_(0),
+    animTotalTime_(0.0f),
+    currentAnimTime_(0.0f),
+    swimTimer_(0.0f),
+    currentDirection_{ 0.0f, 0.0f, 0.0f },
+    changeDirectionInterval_(0.0f),
+    type_(FishType::None),
+    currentAngleY_(0.0f)
 {
 }
 
-Fish::~Fish()
+Fish::~Fish(void)
 {
 }
 
-void Fish::Init(void)
+void Fish::Init(Player* player, Dobber* dobber, FishManager* fishmng)
 {
+    player_ = player;
+    dobber_ = dobber;
+    fishmng_ = fishmng;
 }
 
+// æ›´æ–°å‡¦ç†
 void Fish::Update(void)
 {
-    currentAnimTime_ += ANIM_SPEED;
-
-    if (currentAnimTime_ > animTotalTime_)
-    {
-        currentAnimTime_ = 0.0f;
-    }
-    MV1SetAttachAnimTime(fishmodel, animAttachNo_, currentAnimTime_);
-    MV1SetPosition(fishmodel, FishPos);
+    FishAnimation();
+    FishFreedomMove();
 }
 
-void Fish::Draw(void) const
+// æç”»å‡¦ç†
+void Fish::Draw(void)
 {
-    MV1DrawModel(fishmodel);
+    MV1DrawModel(fishModel_);
 }
 
+// è§£æ”¾å‡¦ç†
 void Fish::Release(void)
 {
-    MV1DeleteModel(fishmodel);
+    MV1DeleteModel(fishModel_);
 }
 
+// é­šå…¨ä½“ã®å‡¦ç†
 void Fish::Move(VECTOR pos, const int fishidx)
 {
-    Player& player = Player::GetInstance();
+    // ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ã¨é­šã®è·é›¢
+    VECTOR direction_ = VNorm(VSub(player_->GetPos(), fishPos_));
 
-    VECTOR playerPos = player.GetPos();
-    VECTOR direction = VNorm(VSub(playerPos, FishPos));
+    direction_ = VScale(direction_, -1.0f);
 
-    direction = VScale(direction, -1.0f);
+    UpdateRotationToDirection(direction_);
 
-    float angleY = atan2f(direction.x, direction.z);
-    static float currentAngleY = { 0.0f };
-    float rotationSpeed = 0.1f;
-    float deltaAngle = angleY - currentAngleY;
-
-    if (deltaAngle > DX_PI_F)deltaAngle -= 2.0f * DX_PI_F;
-    if (deltaAngle < -DX_PI_F)deltaAngle += 2.0f * DX_PI_F;
-
-    currentAngleY += deltaAngle * rotationSpeed;
-
-    MV1SetRotationXYZ(fishmodel, VGet(0.0f, currentAngleY + 90.0f, 0.0f));
-
+    // å·¦ã‚¯ãƒªãƒƒã‚¯æŠ¼ã—ãŸã¨ã
     if (InputManager::GetInstance().IsClickMouseLeft())
     {
-        FishPos = VAdd(FishPos, VScale(VNorm(VSub(player.GetPos(), FishPos)), 7.0f)); // ƒvƒŒƒCƒ„[‚É‹ß‚Ã‚¯‚é
-        pos = FishPos;
-        pos.y = -165.0f;
+        // ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ã«è¿‘ã¥ã‘ã‚‹
+        fishPos_ = VAdd(fishPos_, VScale(VNorm(VSub(player_->GetPos(), fishPos_)), CLOSER)); 
+        pos = fishPos_;
+        pos.y = GROUND_Y;
     }
-    else {
-        // ƒ}ƒEƒX¶ƒL[‚ª‰Ÿ‚³‚ê‚Ä‚¢‚È‚¢ê‡Aukimodel‚ğ‰“‚´‚¯‚é
-        FishPos = VAdd(FishPos, VScale(VNorm(VSub(FishPos, player.GetPos())), 2.0f)); // ƒvƒŒƒCƒ„[‚©‚ç‰“‚´‚¯‚é
-        pos = FishPos;
-        pos.y = -165.0f;
+    else 
+    {
+        // ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ã‹ã‚‰é ã–ã‘ã‚‹
+        fishPos_ = VAdd(fishPos_, VScale(VNorm(VSub(fishPos_, player_->GetPos())), LEAVE)); 
+        pos = fishPos_;
+        pos.y = GROUND_Y;
     }
 
     MoveLR();
 
-    MV1SetPosition(fishmodel, FishPos);
-    Dobber::GetInstance().SetUkiPos(pos);
+    MV1SetPosition(fishModel_, fishPos_);
+    dobber_->SetUkiPos(pos);
 }
 
-//‹›‚ğ¶‰E‚Ì‚Ç‚¿‚ç‚©‚ÉˆÚ“®‚³‚¹‚é‚©‚ğŒˆ‚ß‚é
+// é­šã‚’å·¦å³ã®ã©ã¡ã‚‰ã‹ã«ç§»å‹•ã•ã›ã‚‹ã‹ã‚’æ±ºã‚ã‚‹
 void Fish::MoveLR(void)
 {
-    interval--;
-    if (interval <= 0)
+    // ä¸€å®šã®æ™‚é–“ã§ãƒ©ãƒ³ãƒ€ãƒ ã«æ±ºã‚ã‚‹
+    timeToMove--;
+    if (timeToMove <= 0)
     {
-        direction = Random::GetInstance().GetRandF(0, 1) > 0.5f ? 1 : -1;;
-        interval = 60;
+        direction_ = Random::GetInstance().GetRandF(0, 1) > 0.5f ? 1 : -1;;
+        timeToMove = 60;
     }
-    angle += 0.05f * direction;
-    FishPos.x += sinf(angle * 2.0f);
+    angle_ += 0.05f * direction_;
+    fishPos_.x += sinf(angle_ * 2.0f);
 }
 
+// å‘ããƒ™ã‚¯ãƒˆãƒ«ã«åˆã‚ã›ã¦å›è»¢ã•ã›ã‚‹
+void Fish::UpdateRotationToDirection(const VECTOR& direction)
+{
+    // ç§»å‹•ã—ã¦ã„ãªã„ï¼ˆã»ã¼å‘ããŒãªã„ï¼‰ãªã‚‰å›è»¢ã—ãªã„
+    if (VSize(direction) <= ROTATE_THRESHOLD) return;
+
+    // å‘ããƒ™ã‚¯ãƒˆãƒ«ã‚’æ­£è¦åŒ–ï¼ˆå˜ä½ãƒ™ã‚¯ãƒˆãƒ«ã«ã™ã‚‹ï¼‰
+    VECTOR normDir = VNorm(direction);
+
+    // é­šãŒå‘ãã¹ãè§’åº¦ï¼ˆYè»¸å›è»¢ï¼‰ã‚’æ±‚ã‚ã‚‹
+    float targetAngleY = atan2f(normDir.x, normDir.z); // Xã¨Zã‚’ä½¿ã£ã¦è§’åº¦ç®—å‡º
+
+    // ç¾åœ¨ã®è§’åº¦ã¨ã®å·®ï¼ˆå›è»¢é‡ï¼‰ã‚’æ±‚ã‚ã‚‹
+    float deltaAngle = targetAngleY - currentAngleY_;
+
+    // å·®ãŒÂ±180åº¦ã‚’è¶…ãˆãŸå ´åˆã¯ã€é€†å›è»¢ã«ä¿®æ­£ï¼ˆæœ€çŸ­å›è»¢ï¼‰
+    if (deltaAngle > DX_PI_F)       deltaAngle -= FULL_ROTATION_DEG;
+    else if (deltaAngle < -DX_PI_F) deltaAngle += FULL_ROTATION_DEG;
+
+    // å›è»¢ã‚’å°‘ã—ãšã¤ï¼ˆROTATE_SPEEDåˆ†ã ã‘ï¼‰è¿‘ã¥ã‘ã‚‹
+    currentAngleY_ += deltaAngle * ROTATE_SPEED;
+
+    // å®Ÿéš›ã«ãƒ¢ãƒ‡ãƒ«ã‚’å›è»¢ã•ã›ã‚‹ï¼ˆè£œæ­£è§’ã‚‚åŠ ãˆã‚‹ï¼‰
+    MV1SetRotationXYZ(fishModel_, VGet(0.0f, currentAngleY_ + ANGLE_CORRECTION_RAD, 0.0f));
+}
+
+// é­šãŒã‚¦ã‚­ã«ãã£ã¤ã„ã¦ã„ã‚‹æ™‚é–“ã®ã‚«ã‚¦ãƒ³ãƒˆ
 void Fish::FishIntervalCount(void)
 {
-    fishInterval++;
-    intervalcountflg = true;
+    fishInterval_++;
+    isIntervalCount = true;
 }
 
-//§ŒÀŠÔˆÈ“à‚É¶ƒNƒŠƒbƒN‚ğ‰Ÿ‚µ‚½‚ç’Ş‚è‚ğŠJn‚·‚é
-void Fish::FishingInterval(Dobber& dobber)
+// åˆ¶é™æ™‚é–“ä»¥å†…ã«å·¦ã‚¯ãƒªãƒƒã‚¯ã‚’æŠ¼ã—ãŸã‚‰é‡£ã‚Šã‚’é–‹å§‹ã™ã‚‹
+void Fish::FishingInterval(void)
 {
-    if (fishInterval < MAX_INTERVAL && InputManager::GetInstance().IsTrgMouseLeft()) {
-        leftclickpressflg = true;
-        intervalcountflg = false;
+    if (fishInterval_ < MAX_INTERVAL && InputManager::GetInstance().IsTrgMouseLeft()) 
+    {
+        isLeftClickPress = true;
+        isIntervalCount = false;
     }
-    else {
-        //ŠÔ§ŒÀˆÈ“à‚É¶ƒNƒŠƒbƒN‰Ÿ‚¹‚È‚©‚Á‚½‚çƒŠƒZƒbƒg
-        if (!leftclickpressflg) {
+    else 
+    {
+        // æ™‚é–“åˆ¶é™ä»¥å†…ã«å·¦ã‚¯ãƒªãƒƒã‚¯æŠ¼ã›ãªã‹ã£ãŸã‚‰ãƒªã‚»ãƒƒãƒˆ
+        if (!isLeftClickPress) 
+        {
             FishIntervalCount();
-            if (fishInterval >= MAX_INTERVAL) {
-                //fishInterval = MAX_INTERVAL;
-                dobber.Reset();
+            if (fishInterval_ >= MAX_INTERVAL) 
+            {
+                dobber_->Reset();
                 Reset();
             }
         }
     }
 }
 
+// é­šãŒã‚¦ã‚­ã«ã‚ˆã£ã¦æ¥ã‚‹å‡¦ç†
 void Fish::FishCome(int& fishidx)
 {
-    //‹›‚ÌˆÊ’u‚ğuki‚ÌˆÊ’u‚É‹ß‚Ã‚¯‚é
-    Dobber& uki = Dobber::GetInstance();
-    VECTOR ukipos = uki.GetUkiPos();
-    VECTOR direction = VNorm(VSub(ukipos, FishPos)); // uki‚Ì•ûŒü
-    FishPos.x += direction.x * 2.0f; // xÀ•W‚ğXV
-    FishPos.z += direction.z * 2.0f; // zÀ•W‚ğXV
+    VECTOR ukiPos = dobber_->GetUkiPos();
 
-    //‹›‚Ì‰ñ“]ˆ—
-    VECTOR targetDirection = VNorm(VSub(uki.GetUkiPos(), FishPos));
-    if (VSize(targetDirection) > 0.01f) {
-        float angleY = atan2f(targetDirection.x, targetDirection.z);
-        currentAngleY = { 0.0f };
+    // ukiã«å‘ã‹ã†æ–¹å‘ã®æ­£è¦åŒ–ãƒ™ã‚¯ãƒˆãƒ«
+    VECTOR direction_ = VNorm(VSub(ukiPos, fishPos_));
 
-        //‹›‚ğ‚ä‚Á‚­‚è‰ñ“]‚³‚¹‚é
-        float deltaAngle = angleY - currentAngleY;
-        if (deltaAngle > 180.0f)deltaAngle -= 360.0f;
-        if (deltaAngle < -180.0f)deltaAngle += 360.0f;
+    // é€Ÿåº¦å®šæ•°ã‚’ä½¿ã£ã¦ä½ç½®æ›´æ–°ï¼ˆx,zï¼‰
+    fishPos_.x += direction_.x * FISH_MOVE_SPEED;
+    fishPos_.z += direction_.z * FISH_MOVE_SPEED;
 
-        currentAngleY += deltaAngle * ROTATESPEED;
+    UpdateRotationToDirection(direction_);
 
-        MV1SetRotationXYZ(fishmodel, VGet(0.0f, currentAngleY + 90.0f, 0.0f));
-    }
-
-    MV1SetPosition(fishmodel, FishPos); // V‚µ‚¢ˆÊ’u‚ğİ’è
+    MV1SetPosition(fishModel_, fishPos_);
 }
 
-//‹›‚ª©—R‚É“®‚­
-void Fish::FishSwimLogic(void)
+void Fish::FishAnimation(void)
 {
-    if (!(Dobber::GetInstance().GetfishingFlg())) {
-        //‰Šú‰»(Å‰‚¾‚¯)
-        if (swimTimer == 0.0f && changeDirectionInterval == 0.0f) {
-            currentDirection = VNorm(VGet(Random::GetInstance().GetRandF(-100.0f, 100.0f), Random::GetInstance().GetRandF(-0.5f, 0.5f), Random::GetInstance().GetRandF(-100.0f, 100.0f)));
-            changeDirectionInterval = Random::GetInstance().GetRandF(50.0f, 200.0f);
+    // ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³è¨­å®š
+    currentAnimTime_ += ANIM_SPEED;
+
+    if (currentAnimTime_ > animTotalTime_)
+    {
+        currentAnimTime_ = 0.0f;
+    }
+    MV1SetAttachAnimTime(fishModel_, animAttachNo_, currentAnimTime_);
+    MV1SetPosition(fishModel_, fishPos_);
+}
+
+// é­šãŒè‡ªç”±ã«å‹•ã
+void Fish::FishFreedomMove(void)
+{
+    if (!(dobber_->GetFishingFlg()))
+    {
+        // åˆæœŸåŒ–(æœ€åˆã ã‘)
+        if (swimTimer_ == 0.0f && changeDirectionInterval_ == 0.0f)
+        {
+            currentDirection_ = VNorm(VGet(
+                Random::GetInstance().GetRandF(DIRECTION_XZ_MIN, DIRECTION_XZ_MAX),
+                Random::GetInstance().GetRandF(DIRECTION_Y_MIN, DIRECTION_Y_MAX),
+                Random::GetInstance().GetRandF(DIRECTION_XZ_MIN, DIRECTION_XZ_MAX))
+            );
+            changeDirectionInterval_ = Random::GetInstance().GetRandF(CHANGE_DIRECTION_INTERVAL_MIN, CHANGE_DIRECTION_INTERVAL_MAX);
         }
 
-        //ƒ^ƒCƒ}[‚ğ‘‰Á
-        swimTimer += 1.0f;
+        // ã‚¿ã‚¤ãƒãƒ¼å¢—åŠ 
+        swimTimer_ += TIMER_INCREMENT;
 
-        // ˆê’èŠÔ‚²‚Æ‚É‰j‚®•ûŒü‚ğƒ‰ƒ“ƒ_ƒ€‚É•ÏX
-        if (swimTimer >= changeDirectionInterval) {
-            // ƒ‰ƒ“ƒ_ƒ€‚È•ûŒü‚ğİ’è
-            currentDirection.x = Random::GetInstance().GetRandF(-100.0f, 100.0f);  // X•ûŒü
-            currentDirection.y = Random::GetInstance().GetRandF(-0.5f, 0.5f);  // Y•ûŒüi­‚µã‰º•ûŒü‚É‰j‚®j
-            currentDirection.z = Random::GetInstance().GetRandF(-100.0f, 100.0f);  // Z•ûŒü
+        // æ–¹å‘å¤‰æ›´åˆ¤å®š
+        if (swimTimer_ >= changeDirectionInterval_)
+        {
+            currentDirection_ = VNorm(VGet(
+                Random::GetInstance().GetRandF(DIRECTION_XZ_MIN, DIRECTION_XZ_MAX),
+                Random::GetInstance().GetRandF(DIRECTION_Y_MIN, DIRECTION_Y_MAX),
+                Random::GetInstance().GetRandF(DIRECTION_XZ_MIN, DIRECTION_XZ_MAX))
+            );
 
-            // ƒxƒNƒgƒ‹‚ğ³‹K‰»‚µ‚ÄA•ûŒü‚ğˆê’è‚É
-            currentDirection = VNorm(currentDirection);
-
-            //Ÿ‚Ì•ÏXŠÔŠu‚ğƒ‰ƒ“ƒ_ƒ€‚É
-            changeDirectionInterval = Random::GetInstance().GetRandF(50.0f, 200.0f);
-            swimTimer = 0.0f;            // ƒ^ƒCƒ}[‚ğƒŠƒZƒbƒg
+            changeDirectionInterval_ = Random::GetInstance().GetRandF(CHANGE_DIRECTION_INTERVAL_MIN, CHANGE_DIRECTION_INTERVAL_MAX);
+            swimTimer_ = 0.0f;
         }
+        float swimSpeed = Random::GetInstance().GetRandF(SWIM_SPEED_MIN, SWIM_SPEED_MAX);
 
-        float swimSpeed = Random::GetInstance().GetRandF(1.5f, 3.0f);
+        // é­šã®ç§»å‹•
+        prevFishPos_ = fishPos_;
+        fishPos_ = VAdd(fishPos_, VScale(currentDirection_, swimSpeed));
 
-        //‹›‚ÌˆÚ“®
-        PrevFishPos = FishPos;
-        FishPos = VAdd(FishPos, VScale(currentDirection, swimSpeed));
-        SwimRogicRotate();
-        MV1SetPosition(fishmodel, FishPos);
+        FishFreedomRotate();
+
+        MV1SetPosition(fishModel_, fishPos_);
     }
 }
 
-void Fish::SwimRogicRotate(void) const
+// è‡ªç”±ã«å‹•ã„ã¦ã„ã‚‹ã¨ãã®é­šã®å›è»¢
+void Fish::FishFreedomRotate(void) const
 {
-    VECTOR direction = VSub(FishPos, PrevFishPos);
-
-    if (VSize(direction) <= 0.01f) return;
-    direction = VNorm(direction); // ³‹K‰»Œ‹‰Ê‚ğ•Û‘¶
-
-    float angleY = atan2f(direction.x, direction.z); // ‰ñ“]Šp“x‚ğŒvZiƒ‰ƒWƒAƒ“j
-    static float currentAngleY =  0.0f ;
-    float deltaAngle = angleY - currentAngleY;
-
-    // ‰ñ“]Šp“x‚ğ -ƒÎ`ƒÎ ‚Éû‚ß‚é
-    if (deltaAngle > DX_PI_F) deltaAngle -= 2.0f * DX_PI_F;
-    if (deltaAngle < -DX_PI_F) deltaAngle += 2.0f * DX_PI_F;
-    //‰ñ“]‘¬“x
-    currentAngleY += deltaAngle * ROTATESPEED;
-
-    MV1SetRotationXYZ(fishmodel, VGet(0.0f, currentAngleY + 90.0f, 0.0f));
+    // ç¾åœ¨ã¨ä¸€ãƒ•ãƒ¬ãƒ¼ãƒ å‰ã®åº§æ¨™ã‚’æ¯”ã¹ã‚‹
+    VECTOR direction_ = VSub(fishPos_, prevFishPos_);
+    
+    const_cast<Fish*>(this)->UpdateRotationToDirection(direction_);
 }
 
+// é­šã®åˆ‡ã‚Šæ›¿ãˆ
 void Fish::ChangeFish(FishType newtype)
 {
-    if (fishmodel != -1) {
-        MV1DeleteModel(fishmodel);  // Šù‘¶ƒ‚ƒfƒ‹‚ğíœ
+    if (fishModel_ != -1)
+    {
+        MV1DeleteModel(fishModel_);
     }
 
     type_ = newtype;
 
-    // V‚µ‚¢ƒ‚ƒfƒ‹‚ğƒ[ƒh
-    switch (type_) {
-    case FishType::Ayu:          fishmodel = MV1DuplicateModel(FishManager::GetInstance().GetAyuModel()); fishnumber = 1; break;
-    case FishType::Yamame:       fishmodel = MV1DuplicateModel(FishManager::GetInstance().GetYamameModel()); fishnumber = 2; break;
-    case FishType::Haya:         fishmodel = MV1DuplicateModel(FishManager::GetInstance().GetHayaModel()); fishnumber = 3; break;
-    case FishType::Huna:         fishmodel = MV1DuplicateModel(FishManager::GetInstance().GetHunaModel()); fishnumber = 4; break;
-    case FishType::Oikawa:       fishmodel = MV1DuplicateModel(FishManager::GetInstance().GetOikawaModel()); fishnumber = 5; break;
-    case FishType::Medaka:       fishmodel = MV1DuplicateModel(FishManager::GetInstance().GetMedakaModel()); fishnumber = 6; break;
-    case FishType::Kawamutu:     fishmodel = MV1DuplicateModel(FishManager::GetInstance().GetKawamutuModel()); fishnumber = 7; break;
-    case FishType::Iwana:        fishmodel = MV1DuplicateModel(FishManager::GetInstance().GetIwanaModel()); fishnumber = 8; break;
-    case FishType::Poriputerusu: fishmodel = MV1DuplicateModel(FishManager::GetInstance().GetPoriputeModel()); fishnumber = 9; break;
-    case FishType::Nizimasu:     fishmodel = MV1DuplicateModel(FishManager::GetInstance().GetNizimasuModel()); fishnumber = 10; break;
-    case FishType::Ugui:         fishmodel = MV1DuplicateModel(FishManager::GetInstance().GetUguiModel()); fishnumber = 11; break;
-    case FishType::Wakasagi:     fishmodel = MV1DuplicateModel(FishManager::GetInstance().GetWakasagiModel()); fishnumber = 12; break;
-    case FishType::Uthtenoputeron: fishmodel = MV1DuplicateModel(FishManager::GetInstance().GetUthModel()); fishnumber = 13; break;
-    default: fishmodel = -1; break;
-    }
+    static const std::map<FishType, int> fishTypeToNumber = 
+    {
+        { FishType::Ayu, 1 },
+        { FishType::Yamame, 2 },
+        { FishType::Haya, 3 },
+        { FishType::Huna, 4 },
+        { FishType::Oikawa, 5 },
+        { FishType::Medaka, 6 },
+        { FishType::Kawamutu, 7 },
+        { FishType::Iwana, 8 },
+        { FishType::Poriputerusu, 9 },
+        { FishType::Nizimasu, 10 },
+        { FishType::Ugui, 11 },
+        { FishType::Wakasagi, 12 },
+        { FishType::Uthtenoputeron, 13 }
+    };
 
-    // ƒ‚ƒfƒ‹‚ÌˆÊ’u‚âƒXƒP[ƒ‹‚ğİ’è
-    if (fishmodel != -1) {
-        FishPos= {
-             Random::GetInstance().GetRandY(minX, maxX),  // XÀ•W
-             Random::GetInstance().GetRandY(minY, maxY),  // YÀ•W
-             Random::GetInstance().GetRandY(minZ, maxZ)   // ZÀ•W
+    int baseModel = fishmng_->GetFishModel(type_);
+
+    if (baseModel != -1)
+    {
+        fishModel_ = MV1DuplicateModel(baseModel);
+
+        fishPos_ = 
+        {
+            Random::GetInstance().GetRandY(SPAWN_RANGE_MIN_X, SPAWN_RANGE_MAX_X),
+            Random::GetInstance().GetRandY(SPAWN_RANGE_MIN_Y, SPAWN_RANGE_MAX_Y),
+            Random::GetInstance().GetRandY(SPAWN_RANGE_MIN_Z, SPAWN_RANGE_MAX_Z)
         };
-        MV1SetPosition(fishmodel, FishPos);
-        MV1SetScale(fishmodel, { fishscale,fishscale,fishscale });
 
-        // ƒAƒjƒ[ƒVƒ‡ƒ“İ’è
-        animAttachNo_ = MV1AttachAnim(fishmodel, 0,-1,-1);
-        animTotalTime_ = MV1GetAttachAnimTotalTime(fishmodel, animAttachNo_);
+        MV1SetPosition(fishModel_, fishPos_);
+        MV1SetScale(fishModel_, fishScale_);
+
+        animAttachNo_ = MV1AttachAnim(fishModel_, 0, -1, -1);
+        animTotalTime_ = MV1GetAttachAnimTime(fishModel_, animAttachNo_);
         currentAnimTime_ = 0.0f;
-        MV1SetAttachAnimTime(fishmodel, animAttachNo_, currentAnimTime_);
+        MV1SetAttachAnimTime(fishModel_, animAttachNo_, currentAnimTime_);
     }
+
+    // fishNumber_ ã®è¨­å®šï¼ˆè¦‹ã¤ã‹ã‚‰ãªã‘ã‚Œã° 0ï¼‰
+    auto it = fishTypeToNumber.find(type_);
+    fishNumber_ = (it != fishTypeToNumber.end()) ? it->second : 0;
 }
 
+// ãƒªã‚»ãƒƒãƒˆ
 void Fish::Reset(void)
 {
-    intervalcountflg = false;
-    fishInterval = 0.0f;
-    MV1DeleteModel(fishmodel);
-    leftclickpressflg = false;
+    isIntervalCount = false;
+    fishInterval_ = 0.0f;
+    MV1DeleteModel(fishModel_);
+    isLeftClickPress = false;
 }

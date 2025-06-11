@@ -1,83 +1,52 @@
 #pragma once
 #include <DxLib.h>
 #include <random>
+#include <map>
+#include <string>
 #include "Fish.h"
-#include "Player.h"
+
+class Player;
+class Gauge;
 
 class FishManager
 {
 public:
 	static constexpr int MAX_FISH = 25;
 
-	// インスタンスの生成
-	static void CreateInstance(void);
-	// インスタンスの取得
-	static FishManager& GetInstance(void);
+	using FishType = Fish::FishType;
 
-	FishManager();
-	~FishManager();
-	void Init(void);
-	void Update(void);
-	void Draw(void);
-	void Release(void);
+	std::map<Fish::FishType, std::string> fishModelPaths_;
+	std::map<Fish::FishType, int> fishModels_;
 
-	void Probability();		//確率
-	void FishMove(VECTOR pos);
-	void Reset(void);
-	void FishAllDelete(void);
+	FishManager(void);			// コンストラクタ
+	~FishManager(void);			// デストラクタ
+	void Init(Player* player, Dobber* dobber, Gauge* gauge);		// 初期化処理
+	void Update(void);			// 更新処理
+	void Draw(void);			// 描画処理
+	void Release(void);			// 解放処理
 
-	[[nodiscard]] int GetclosestFishIndex(void) const { return closestFishindex; }	//一番近い魚の番号(配列)
-	[[nodiscard]] int GetClosestFishModel(void)const;	//一番近い魚のモデル
-	[[nodiscard]] int GetClosestFishNumber(void);		//一番近い魚の番号(FishTypeの番号)
-	[[nodiscard]] bool GetClosestIntervalFlg(void)const;
-	[[nodiscard]] bool GetFishHitFlg(void)const { return fishhitflg; }
-	void SetClosestFishInterval(float interval);
-	void SetCountFlg(bool flg);
+	void Probability(void);			// 確率で魚を生成
+	void TouchDownMove(VECTOR pos);	// ウキが着水した時の魚の処理
+	void Reset(void);				// リセット
+	void FishAllDelete(void);		// 魚全消し
 
-	int GetAyuModel(void)const { return ayumodel; }
-	int GetYamameModel(void)const { return yamamemodel; }
-	int GetHayaModel(void)const { return hayamodel; }
-	int GetHunaModel(void)const { return hunamodel; }
-	int GetOikawaModel(void)const { return oikawamodel; }
-	int GetKawamutuModel(void)const { return kawamutumodel; }
-	int GetIwanaModel(void)const { return iwanamodel; }
-	int GetPoriputeModel(void)const { return poriputemodel; }
-	int GetNizimasuModel(void)const { return nizimasumodel; }
-	int GetWakasagiModel(void)const { return wakasagimodel; }
-	int GetUguiModel(void)const { return uguimodel; }
-	int GetMedakaModel(void)const { return medakamodel; }
-	int GetUthModel(void)const { return uthmodel; }
+	[[nodiscard]] int GetFishModel(Fish::FishType type) const;
+	[[nodiscard]] int GetClosestFishModel(void)const { return fishList[closestFishIndex_].GetFishModel(); }
+	[[nodiscard]] int GetClosestFishNumber(void) { return fishList[closestFishIndex_].GetFishNumber(); }
+	[[nodiscard]] bool GetFishHitFlg(void)const { return isFishHit_; }
+	void SetClosestFishInterval(float interval) { for (Fish& fish : fishList)fish.SetInterval(interval); }
+	void SetCountFlg(bool flg) { for (Fish& fish : fishList)fish.SetCountFlg(flg); }
 
+	void ClosestFishAnimation(void);
 private:
-	// 静的インスタンス
-	static FishManager* instance_;
 
-	std::vector<Fish> fishlist;
+	std::vector<Fish> fishList;
 
-	//魚関連の情報
-	int ayumodel;			//アユ
-	int yamamemodel;		//ヤマメ
-	int hayamodel;			//ハヤ
-	int hunamodel;			//フナ
-	int oikawamodel;		//オイカワ
-	int kawamutumodel;		//カワムツ
-	int iwanamodel;			//イワナ
-	int poriputemodel;		//ポリプテルス
-	int nizimasumodel;		//ニジマス
-	int wakasagimodel;		//ワカサギ
-	int uguimodel;			//ウグイ
-	int medakamodel;		//メダカ
-	int uthmodel;			//ユーステノプテロン
+	bool isFishHit_;		// 当たっているか
+	int closestFishIndex_;	// 最も近い魚
 
-	bool fishhitflg;		//当たっているか
-
-	int randValue;			//ランダムの値(魚のモデルに必要)
-	int closestFishindex;	//最も近い魚
-
-	float Clamp(float value, float min, float max) {
-		if (value < min) return min;
-		if (value > max) return max;
-		return value;
-	}
+	Player* player_;
+	Dobber* dobber_;
+	Gauge* gauge_;
 };
 

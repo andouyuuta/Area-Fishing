@@ -1,37 +1,35 @@
 #pragma once
 #include <DxLib.h>
 
+class Player;
+class Dobber;
+class FishManager;
+class Rod;
+
 class Gauge
 {
 public:
-	// インスタンスの生成
-	static void CreateInstance(void);
-	// インスタンスの取得
-	static Gauge& GetInstance(void);
-	Gauge();
-	~Gauge();
-	// 初期化
-	void Init(void);
-	// 更新
-	void Update(void);
-	// 描画
-	void Draw(void);
-	// 解放処理
-	void Release(void);
-	void UpdateGauge(void);     //ゲージの更新
-	void SetGaugeFlg(const bool flg) { gaugeflg = flg; }
+	Gauge(void);				// コンストラクタ
+	~Gauge(void);				// デストラクタ
+	void Init(Player* player, Dobber* dobber, Rod* rod, FishManager* fishmng);			// 初期化処理
+	void Update(void);			// 更新処理
+	void Draw(void);			// 描画処理
+	void Release(void);			// 解放処理
+	void UpdateGauge(void);     // ゲージの更新
+	void SetGaugeFlg(const bool flg) { isDraw_ = flg; }
 	void Reset(void);
 private:
-	static Gauge* instance_;
-	//ゲージ関連
-	int gagugebackhandle;		//ゲージの画像
-	float maxValue = 100.0f;	//最大ゲージ
-	float minValue = 0.0f;		//最小ゲージ
-	float gaugeInterval = 0;	//最大ゲージにいる時間
-	bool gaugeflg = false;
-	float gaugeValue = 50;		//ゲージの初期値
-	VECTOR GaugePos;			//ゲージの座標
-	void DrawGauge(const int x, const int y, const int width, const int height, const float value);     //ゲージの表示
+	// ゲージ関連
+	int gaugeHandle_;			// ゲージの画像
+	float gaugeInterval_;		// 最大ゲージにいる時間
+	bool isDraw_;				// ゲージを出すか
+	float gaugeValue_;			// ゲージの初期値
+	void DrawGauge(float x, float y, float width, float height, float value);     // ゲージの表示
+
+	Player* player_;
+	Dobber* dobber_;
+	FishManager* fishmng_;
+	Rod* rod_;
 };
 
 

@@ -1,7 +1,9 @@
 #pragma once
 #include <chrono>
+
 class SceneBase;
 class Fader;
+class Camera;
 class MiniCamera;
 
 class SceneManager
@@ -33,10 +35,13 @@ public:
 	void ChangeScene(SCENE_ID nextId);
 
 	// シーンIDの取得
-	SCENE_ID GetSceneID(void);
+	SCENE_ID GetSceneID(void) { return sceneId_; }
 
 	// デルタタイムの取得
 	float GetDeltaTime(void) const;
+
+	// カメラの取得
+	Camera* GetCamera(void) const;
 
 private:
 
@@ -51,6 +56,9 @@ private:
 
 	// 各種シーン
 	SceneBase* scene_;
+
+	// カメラ
+	Camera* camera_;
 
 	// シーン遷移中判定
 	bool isSceneChanging_;
@@ -79,9 +87,9 @@ private:
 
 	int SunHundle;
 
-	int toriSoundHundle = 0;
-	int kawaSoundHundle = 0;
-	int takiSoundHundle = 0;
-	int semiSoundHundle = 0;
+	int toriSoundHundle;
+	int kawaSoundHundle;
+	int takiSoundHundle;
+	int semiSoundHundle;
 
 };

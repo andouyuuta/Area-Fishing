@@ -5,44 +5,57 @@
 #include "../Manager/Camera.h"
 #include "Player.h"
 #include "Stage.h"
-#include"EffekseerForDXLib.h"
+#include "EffekseerForDXLib.h"
+#include "Player.h"
 #include <cmath>
 
 namespace
 {
-	// アニメーションの再生速度
+	// アニメーション・移動関連
 	constexpr float ANIM_SPEED = 0.2f;
-	// 移動量
 	constexpr float MOVE_MAX_SPEED = 10.0f;
-	//初期モデル補正角度
-	constexpr VECTOR INIT_MODEL_ROT_OFFSET = { 0.0f,DX_PI_F,0.0f };
-	//衝突判定
+	constexpr float PLAYER_ACCELERATION = 0.02f;
+	constexpr float ROTATION_SPEED = 1.0f;
 	constexpr float COLLISION_RADIUS = 10.0f;
-	//回転スピード
-	const float ROTATION_SPEED = 1.0f;
-}
+	constexpr float GROUND_Y = -151.0f;
 
-Player* Player::instance_ = nullptr;
+	// プレイヤー初期設定
+	constexpr VECTOR PLAYER_INITIAL_POS = { 50.0f, -151.0f, 50.0f };
+	constexpr VECTOR INIT_MODEL_ROT_OFFSET = { 0.0f, DX_PI_F, 0.0f };
+	constexpr VECTOR PLAYER_MODEL_SCALE = { 0.35f, 0.35f, 0.35f };
 
-void Player::CreateInstance()
-{
-	if (instance_ == nullptr)
-	{
-		instance_ = new Player();
-	}
-	instance_->Init();
-}
+	// サウンド関連
+	constexpr float SOUND_RADIUS = 20000.0f;
+	constexpr VECTOR WATERFALL_SOUND_POS = { 0.0f, 0.0f, 23000.0f };
 
-Player& Player::GetInstance(void)
-{
-	return *instance_;
+	// エフェクト関連
+	constexpr VECTOR RIVER_EFFECT_POS = { 0.0f, 0.0f, -20.0f };
+	constexpr VECTOR RIVER_EFFECT_ROT = { 0.0f, 0.0f, 0.0f };
+	constexpr VECTOR RIVER_EFFECT_SCALE = { 10.0f, 10.0f, 12.0f };
+
+	// パス関連
+	constexpr const char* RIVER_EFFECT_PATH = "Data/Effect/run.efkefc";
+	constexpr const char* PLAYER_MODEL_PATH = "Data/Model/Stage/boat.mv1";
+	constexpr const char* BOAT_SOUND_PATH = "Data/Sound/ship_engine.mp3";
 }
 
 Player::Player(void)
-	: playerpos_{ 0.0f,0.0f,0.0f },FallSoundHundle_(-1),RiverSoundHundle_(-1),SoundPos{0.0f,0.0f,0.0f},animAttachNo_(0),animTotalTime_(0),boatSoundHundle(0),
-	boatstopHundle(0),camerarot_{0.0f,0.0f,0.0f},currentAnimTime_(0),currentMode_(PlayerMode::THIRD_PERSON),currentkamaeAnimTime_(0),currentthrowAnimTime_(0),effectResourceHandle(-1),
-	isSoundPlaying(false),kamaerodAttachNo_(0),kamaerodTotalTime_(0),localRot_{0.0f,0.0f,0.0f},moveRot_{0.0f,0.0f,0.0f},moveVecRad_{0.0f,0.0f,0.0f},moveVec_{0.0f,0.0f,0.0f},playermodel_(-1),
-	playerrot_{ 0.0f,0.0f,0.0f },playingEffectHandle(-1),rot_{0.0f,0.0f,0.0f},throwanimAttachNo_(0),throwanimTotalTime_(0.0f)
+	:pos_(PLAYER_INITIAL_POS),
+	scale_(PLAYER_MODEL_SCALE),
+	animAttachNo_(0),
+	animTotalTime_(0),
+	boatSoundHandle_(-1),
+	currentAnimTime_(0.0f),
+	currentMode_(PlayerMode::THIRD_PERSON),
+	effectResourceHandle_(-1),
+	isSoundPlaying_(false),
+	localRot_(INIT_MODEL_ROT_OFFSET),
+	moveVec_{ 0.0f, 0.0f, 0.0f },
+	moveSpeed_(0.0f),
+	rot_{ 0.0f, 0.0f, 0.0f },
+	targetRot_{ 0.0f, 0.0f, 0.0f },
+	playerModel_(-1),
+	playingEffectHandle_(-1)
 {
 }
 
@@ -50,8 +63,10 @@ Player::~Player(void)
 {
 }
 
-void Player::Init()
+void Player::Init(Camera* camera)
 {
+	camera_ = camera;
+
 	SetUseDirect3DVersion(DX_DIRECT3D_11);
 
 	if (Effekseer_Init(8000) == -1)
@@ -59,86 +74,61 @@ void Player::Init()
 		DxLib_End();
 		return;
 	}
+
 	SetChangeScreenModeGraphicsSystemResetFlag(FALSE);
 	Effekseer_SetGraphicsDeviceLostCallbackFunctions();
 
-	effectResourceHandle = LoadEffekseerEffect("Data/Effect/run.efkefc", 10.0f);
-	playingEffectHandle = PlayEffekseer3DEffect(effectResourceHandle);			//川エフェクト１のハンドル
+	effectResourceHandle_ = LoadEffekseerEffect(RIVER_EFFECT_PATH, 10.0f);
+	playingEffectHandle_ = PlayEffekseer3DEffect(effectResourceHandle_);
 
-	SetPosPlayingEffekseer3DEffect(playingEffectHandle, 00.0f,/* DX_PI_F / 2*/0.0f, -20.0f);
-	SetRotationPlayingEffekseer3DEffect(playingEffectHandle, 0.0f, .0f, 0.0f);
-	SetScalePlayingEffekseer3DEffect(playingEffectHandle, 10.0f, 10.0f, 12.0f);
+	SetPosPlayingEffekseer3DEffect(playingEffectHandle_, RIVER_EFFECT_POS.x, RIVER_EFFECT_POS.y, RIVER_EFFECT_POS.z);
+	SetRotationPlayingEffekseer3DEffect(playingEffectHandle_, RIVER_EFFECT_ROT.x, RIVER_EFFECT_ROT.y, RIVER_EFFECT_ROT.z);
+	SetScalePlayingEffekseer3DEffect(playingEffectHandle_, RIVER_EFFECT_SCALE.x, RIVER_EFFECT_SCALE.y, RIVER_EFFECT_SCALE.z);
 
-	// モデルの読み込み
-	playermodel_ = MV1LoadModel("Data/Model/Stage/boat.mv1");
+	playerModel_ = MV1LoadModel(PLAYER_MODEL_PATH);
+	boatSoundHandle_ = LoadSoundMem(BOAT_SOUND_PATH);
+	isSoundPlaying_ = false;
 
-	boatSoundHundle = LoadSoundMem("Data/Sound/ship_engine.mp3");
-	isSoundPlaying = false;
+	MV1SetPosition(playerModel_, pos_);
+	MV1SetScale(playerModel_, scale_);
 
-	// モデルの初期位置設定
-	playerpos_ = { 50.0f, -151.0f, 50.0f };
-
-	MV1SetPosition(playermodel_, playerpos_);
-	MV1SetScale(playermodel_, scale_);
-
-	// 再生するアニメーションの設定
-	animAttachNo_ = MV1AttachAnim(playermodel_, 0, -1, -1);
-	// アニメーション総時間の取得
-	animTotalTime_ = MV1GetAttachAnimTotalTime(playermodel_, animAttachNo_);
+	animAttachNo_ = MV1AttachAnim(playerModel_, 0, -1, -1);
+	animTotalTime_ = MV1GetAttachAnimTotalTime(playerModel_, animAttachNo_);
 	currentAnimTime_ = 0.0f;
-	// モデルに指定時間のアニメーションを設定する
-	MV1SetAttachAnimTime(playermodel_, animAttachNo_, currentAnimTime_);
-
-	//移動ベクトルが作成する角度
-	moveVecRad_ = { 0.0f,0.0f,0.0f };
-
-	//モデルの角度設定
-	rot_ = { 0.0f,0.0f,0.0f };
-
-	//モデルの角度
-	localRot_ = INIT_MODEL_ROT_OFFSET;
-
-	currentMode_ = PlayerMode::THIRD_PERSON;
+	MV1SetAttachAnimTime(playerModel_, animAttachNo_, currentAnimTime_);
 
 	SetCreate3DSoundFlag(TRUE);
-	FallSoundHundle_ = LoadSoundMem("Data/Sound/waterfal.mp3");
 	SetCreate3DSoundFlag(FALSE);
-
-	SoundPos = { 0.0f,0.0f,23000.0f };
-
-	Set3DPositionSoundMem(SoundPos, FallSoundHundle_);
-
-	Set3DRadiusSoundMem(RADIUS, FallSoundHundle_);
 }
 
 void Player::Update(void)
 {
-
 	Effekseer_Sync3DSetting();
 
-	PlaySoundMem(FallSoundHundle_, DX_PLAYTYPE_LOOP);
-	Set3DRadiusSoundMem(RADIUS, FallSoundHundle_);
-
 	currentAnimTime_ += ANIM_SPEED;
-	MV1SetAttachAnimTime(playermodel_, animAttachNo_, currentAnimTime_);
+	MV1SetAttachAnimTime(playerModel_, animAttachNo_, currentAnimTime_);
 
+	// アニメーションループ再生
 	if (currentAnimTime_ > animTotalTime_)
 	{
 		currentAnimTime_ = 0.0f;
 	}
 
 	auto& ins = InputManager::GetInstance();
+	// 右クリックで一人称・三人称変換
 	if (ins.IsTrgMouseRight())
 	{
 		if (currentMode_ == PlayerMode::THIRD_PERSON)
 		{
 			currentMode_ = PlayerMode::FIRST_PERSON;
 		}
-		else {
+		else 
+		{
 			currentMode_ = PlayerMode::THIRD_PERSON;
 		}
 	}
 
+	// 三人称だけプレイヤーを動かす
 	switch (currentMode_)
 	{
 	case THIRD_PERSON:
@@ -154,16 +144,14 @@ void Player::Update(void)
 
 void Player::Draw(void)
 {
-	MV1DrawModel(playermodel_);
+	MV1DrawModel(playerModel_);
 }
 
 void Player::Release(void)
 {
-	MV1DeleteModel(playermodel_);
-	DeleteSoundMem(boatSoundHundle);
-	DeleteEffekseerEffect(effectResourceHandle);
-
-	DeleteSoundMem(FallSoundHundle_);
+	MV1DeleteModel(playerModel_);
+	DeleteSoundMem(boatSoundHandle_);
+	DeleteEffekseerEffect(effectResourceHandle_);
 }
 
 void Player::UpdateAnimation(void)
@@ -175,85 +163,82 @@ void Player::UpdateAnimation(void)
 		currentAnimTime_ = 0.0f;
 
 		// モデルに指定時間のアニメーションを設定する
-		MV1SetAttachAnimTime(playermodel_, animAttachNo_, currentAnimTime_);
+		MV1SetAttachAnimTime(playerModel_, animAttachNo_, currentAnimTime_);
 	}
 }
 
 void Player::UpdateMove(void)
 {
-	//入力制御取得
+	// 入力制御取得
 	InputManager& ins = InputManager::GetInstance();
 
-	//WASDでプレイヤー移動
+	// WASDでプレイヤー移動
 	moveVec_ = { 0.0f,0.0f,0.0f };
-	//左・右・手前・奥のベクトルを作成する
+	// 左・右・手前・奥のベクトルを作成する
 	VECTOR RIGHT_MOVE_VEC = { 1.0f,0.0f,0.0f };
 	VECTOR LEFT_MOVE_VEC = { -1.0f,0.0f,0.0f };
 	VECTOR FRONT_MOVE_VEC = { 0.0f,0.0f,1.0f };
 	VECTOR BACK_MOVE_VEC = { 0.0f,0.0f,-1.0f };
 
-	//入力方向に移動ベクトルを追加する
-	if (ins.IsNew(KEY_INPUT_W)) { moveVec_ = VAdd(moveVec_, FRONT_MOVE_VEC);}
+	// 入力方向に移動ベクトルを追加する
+	if (ins.IsNew(KEY_INPUT_W)) { moveVec_ = VAdd(moveVec_, FRONT_MOVE_VEC); }
 	if (ins.IsNew(KEY_INPUT_A)) { moveVec_ = VAdd(moveVec_, LEFT_MOVE_VEC); }
 	if (ins.IsNew(KEY_INPUT_S)) { moveVec_ = VAdd(moveVec_, BACK_MOVE_VEC); }
 	if (ins.IsNew(KEY_INPUT_D)) { moveVec_ = VAdd(moveVec_, RIGHT_MOVE_VEC); }
 
 	// キーが現在押されているかチェック
-	keyFlg = IsAnyKeyPressed();
+	if (IsAnyKeyPressed()) 
+	{
+		moveSpeed_ += PLAYER_ACCELERATION;
+		if (moveSpeed_ >= MOVE_MAX_SPEED) 
+		{
+			moveSpeed_ = MOVE_MAX_SPEED;
+		}
+		// ベクトルの移動が行われていたら座標更新
+		if (IsMove(moveVec_))
+		{
+			// カメラ角度分設定する
+			MATRIX cameraMatY = MGetRotY(camera_->GetAngles().y);
+			moveVec_ = VTransform(moveVec_, cameraMatY);
 
-	if(keyFlg) {
-		movespeed += 0.02f;
-		if (movespeed >= MOVE_MAX_SPEED) {
-			movespeed = MOVE_MAX_SPEED;
+			// 座標更新
+			moveVec_ = VNorm(moveVec_);
+			moveVec_ = VScale(moveVec_, moveSpeed_);
+
+			pos_ = VAdd(pos_, moveVec_);
+
+			// 方向を角度に変換する(XZ平面　Y軸)
+			targetRot_.y = atan2f(moveVec_.x, moveVec_.z);
+
+			// 座標設定
+			MV1SetPosition(playerModel_, pos_);
 		}
 
-		//ベクトルの移動が行われていたら座標更新
-	if (IsMove(moveVec_))
-	{		
-		//カメラ角度分設定する
-		VECTOR cameraAngles = camera_->GetAngles();
-		MATRIX cameraMatY = MGetRotY(cameraAngles.y);
-		moveVec_ = VTransform(moveVec_, cameraMatY);
-
-		//座標更新
-		moveVec_ = VNorm(moveVec_);
-		moveVec_ = VScale(moveVec_, movespeed);
-
-		playerpos_ = VAdd(playerpos_, moveVec_);
-
-		//方向を角度に変換する(XZ平面　Y軸)
-		targetRot_.y= atan2f(moveVec_.x, moveVec_.z);
-
-		//座標設定
-		MV1SetPosition(playermodel_, playerpos_);
-	}
-
 		// 音が再生中でない場合、再生を開始
-		if (isSoundPlaying==false) {
-			PlaySoundMem(boatSoundHundle, DX_PLAYTYPE_BACK, true);
-			isSoundPlaying = true;
+		if (isSoundPlaying_ == false) 
+		{
+			PlaySoundMem(boatSoundHandle_, DX_PLAYTYPE_BACK, true);
+			isSoundPlaying_ = true;
 		}
 	}
 	else {
-		movespeed = 0.0f;
+		moveSpeed_ = 0.0f;
 		// 音が再生中であれば停止
-		if (isSoundPlaying == true) {
-			StopSoundMem(boatSoundHundle);
-			isSoundPlaying = false;
+		if (isSoundPlaying_ == true) 
+		{
+			StopSoundMem(boatSoundHandle_);
+			isSoundPlaying_ = false;
 		}
 	}
 
-	if (playerpos_.y!= -151.0f) {
-		playerpos_.y = -151.0f;
-	}
+	pos_.y = GROUND_Y;
 
 	UpdateRotation();
-
 }
 
 void Player::UpdateRotation(void)
 {
-	float deltaTime = GetDeltaTime();
+	float deltaTime = Application::GetInstance().GetDeltaTime();
 
 	// 現在の角度と目標角度の差を計算
 	float rotDiff = targetRot_.y - rot_.y;
@@ -281,17 +266,17 @@ void Player::UpdateRotation(void)
 
 bool Player::IsMove(const VECTOR _moveVec)
 {
-	//XYZすべての座標の移動量の絶対値をとる
+	// XYZすべての座標の移動量の絶対値をとる
 	float absX = abs(_moveVec.x);
 	float absY = abs(_moveVec.y);
 	float absZ = abs(_moveVec.z);
 
-	//かぎりなく小さい値よりもさらに小さければ０と判定する
+	// かぎりなく小さい値よりもさらに小さければ０と判定する
 	bool isNoMoveX = absX < FLT_EPSILON;
 	bool isNoMoveY = absY < FLT_EPSILON;
 	bool isNoMoveZ = absZ < FLT_EPSILON;
 
-	//どの座標も移動していなければ座標更新をせず抜ける
+	// どの座標も移動していなければ座標更新をせず抜ける
 	if (isNoMoveX && isNoMoveY && isNoMoveZ) 
 	{
 		return false;
@@ -302,39 +287,29 @@ bool Player::IsMove(const VECTOR _moveVec)
 	}
 }
 
-void Player::SetRotation(void)
+void Player::SetRotation(void) const
 {
-	//回転行列を使用した角度設定
+	// 回転行列を使用した角度設定
 
-	//単位行列を設定する
+	// 単位行列を設定する
 	MATRIX mat = MGetIdent();
 
-	//モデル自体のY軸回転行列を作成する
+	// モデル自体のY軸回転行列を作成する
 	MATRIX mGetRotY = MGetRotY(rot_.y);
 
-	//モデルの補正用Y軸回転行列を作成する
+	// モデルの補正用Y軸回転行列を作成する
 	MATRIX mGetLocalRotY = MGetRotY(localRot_.y);
 
-	//行列を作成
+	// 行列を作成
 	mat = MMult(mat, mGetRotY);
 	mat = MMult(mat, mGetLocalRotY);
 
-	//行列を使用してモデルの角度を設定
-	MV1SetRotationMatrix(playermodel_, mat);
+	// 行列を使用してモデルの角度を設定
+	MV1SetRotationMatrix(playerModel_, mat);
 }
 
-float Player::GetDeltaTime()
-{
-	// 現在のFPSを取得
-	float fps = GetFPS();
 
-	// FPSが0の場合は安全に1を返す
-	if (fps == 0.0f) return 1.0f;
-
-	// デルタタイムをFPSから逆算
-	return 1.0f / fps;
-}
-
+// 移動キー押したらtrue
 bool Player::IsAnyKeyPressed()
 {
 	InputManager& ins = InputManager::GetInstance();

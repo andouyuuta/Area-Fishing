@@ -16,10 +16,82 @@
 #include "../Common/Random.h"
 #include "../Application.h"
 
-GameScene::GameScene(void) : SceneBase()
+namespace
 {
-	SunHundle = -1, backgroundimg = -1, drawflg = false, clearflg = false, effect_ = nullptr, fishcolor = 0, fishmodel = -1, fishname = "", fishonimg = -1,
-		fishscale = 0.0f, rodspawnimg = -1, ukispawnimg = -1, water_ = nullptr;
+	static constexpr const char* BACKGROUND_PATH = "Data/Image/result.png";
+	static constexpr const char* FISHON_PATH = "Data/Image/FishOn.png";
+	static constexpr const char* ROD_SPAWN_TEXT_PATH = "Data/Image/RodSpawn.png";
+	static constexpr const char* UKI_SPAWN_TEXT_PATH = "Data/Image/UkiSpawn.png";
+
+	// ウィンドウサイズ
+	static constexpr int SCREEN_WIDTH = Application::SCREEN_SIZE_X;
+	static constexpr int SCREEN_HEIGHT = Application::SCREEN_SIZE_Y;
+
+	// 文字列表示位置など
+	static constexpr int FISH_NAME_FONT_SIZE = 48;
+	static constexpr int INFO_FONT_SIZE = 16;
+	static constexpr int INFO_MARGIN_BOTTOM = 30;
+
+	// 魚情報構造体
+	struct FishInfo 
+	{
+		float scale;
+		const char* name;
+		bool isRare = false;
+	};
+
+	// 魚情報リスト
+	static constexpr FishInfo fishInfos[] = 
+	{
+		{0.0f, ""}, // 0番目（未使用）
+		{0.75f, "アユ"},
+		{0.75f, "ヤマメ"},
+		{0.75f, "ハヤ"},
+		{0.5f,  "フナ"},
+		{0.5f,  "オイカワ"},
+		{5.0f,  "メダカ"},
+		{0.75f, "カワムツ"},
+		{0.6f,  "イワナ"},
+		{0.2f,  "ポリプテルス"},
+		{0.3f,  "ニジマス"},
+		{0.5f,  "ウグイ"},
+		{0.5f,  "ワカサギ"},
+		{0.3f,  "ユーステノプテロン", true}
+	};
+
+	// 表示サイズ定数
+	static constexpr int FISHON_X = SCREEN_WIDTH / 2 - 400;
+	static constexpr int FISHON_Y = SCREEN_HEIGHT / 2 - 150;
+	static constexpr int FISHON_WIDTH = 600;
+	static constexpr int FISHON_HEIGHT = 300;
+	static constexpr int GRAPH_Y = 50;
+	static constexpr int GRAPH_WEIGHT_ = 250;
+	static constexpr int GRAPH_HEIGHT = 100;
+	static constexpr int ROD_Y = 50;
+	static constexpr int UKI_TEXT_Y = 130;
+	static constexpr unsigned int TEXT_COLOR = 0xff0000;
+	static constexpr int TEXT_X = 10;
+	static constexpr int TEXT_Y = SCREEN_HEIGHT - 30;
+	static constexpr int CLEAR_TEXT_Y = SCREEN_HEIGHT - 15;
+	static constexpr int MAX_COLOR = 255;
+}
+
+GameScene::GameScene(void) 
+	: SceneBase(), 
+	sunHandle_(-1),
+	backgroundImg_(-1),
+	isDraw_(false),
+	isClear_(false),
+	effect_(nullptr),
+	fishColor(0),
+	fishModel(-1),
+	fishName_(""),
+	fishOnImg_(-1),
+	fishScale_(0.0f),
+	rodSpawnImg_(-1),
+	ukiSpawnImg_(-1),
+	water_(nullptr)
+{
 }
 
 GameScene::~GameScene(void)
@@ -28,100 +100,109 @@ GameScene::~GameScene(void)
 
 void GameScene::Init(void)
 {
-	backgroundimg = LoadGraph("Data/Image/result.png");
-	fishonimg = LoadGraph("Data/Image/FishOn.png");
-	rodspawnimg = LoadGraph("Data/Image/RodSpawn.png");
-	ukispawnimg = LoadGraph("Data/Image/UkiSpawn.png");
-
-	SunHundle = CreateDirLightHandle({ 10.00f,50.0f,10.0f });
-	SunHundle = CreateDirLightHandle({ -100.00f,10.0f,-100.0f });
-	SunHundle = CreateDirLightHandle({ 130.00f,30.0f,30.0f });
-
-
+	backgroundImg_ = LoadGraph(BACKGROUND_PATH);
+	fishOnImg_ = LoadGraph(FISHON_PATH);
+	rodSpawnImg_ = LoadGraph(ROD_SPAWN_TEXT_PATH);
+	ukiSpawnImg_ = LoadGraph(UKI_SPAWN_TEXT_PATH);
 	// 初期化処理
 	camera_ = new Camera();
-	camera_->Init();
-	Stage::CreateInstance();
-	Stage::GetInstance().Init();
-	Player::CreateInstance();
-	Player::GetInstance().Init();
-	Player::GetInstance().SetCamera(camera_);
-	Rod::CreateInstance();
-	Rod::GetInstance().Init();
-	Rod::GetInstance().SetCamera(camera_);
-	FishManager::CreateInstance();
-	FishManager::GetInstance().Init();
-	Dobber::CreateInstance();
-	Dobber::GetInstance().Init();
+	stage_ = new Stage();
+	player_ = new Player();
+	rod_ = new Rod();
+	dobber_ = new Dobber();
+	fishmng_ = new FishManager();
 	effect_ = new EffekseerEffect();
-	effect_->Init();
 	water_ = new Water();
+	gauge_ = new Gauge();
+
+	stage_->Init();
+	player_->Init(camera_);
+	rod_->Init(player_, dobber_);
+	dobber_->Init(player_, rod_, fishmng_, stage_);
+	fishmng_->Init(player_, dobber_, gauge_);
+	effect_->Init();
 	water_->Init();
-	Gauge::CreateInstance();
-	Gauge::GetInstance().Init();
+	gauge_->Init(player_, dobber_, rod_, fishmng_);
+	camera_->Init(rod_, player_);
+
 	SceneManager& sceneManager = SceneManager::GetInstance();
 }
 
 void GameScene::Update(void)
 {
-	camera_->Update();
-	if (Dobber::GetInstance().GetfishingFlg())
+	if (dobber_->GetFishingFlg())
 	{
-		SetFish(FishManager::GetInstance().GetClosestFishNumber());
-		if (clearflg) {
-			if (InputManager::GetInstance().IsTrgDown(KEY_INPUT_SPACE)) {
+		// 魚が釣れた時釣れた魚だけを描画させる
+		SetFish(fishmng_->GetClosestFishNumber());
+		fishmng_->ClosestFishAnimation();
+		camera_->Update();
+		if (isClear_) 
+		{
+			if (InputManager::GetInstance().IsTrgDown(KEY_INPUT_SPACE))
+			{
 				SceneManager::GetInstance().ChangeScene(SceneManager::SCENE_ID::TITLE);
 			}
 		}
-		else {
-			if (InputManager::GetInstance().IsTrgDown(KEY_INPUT_SPACE)) {
-				Initialize();
+		else
+		{
+			if (InputManager::GetInstance().IsTrgDown(KEY_INPUT_SPACE)) 
+			{
+				// 初期化
+				Reset();
 			}
 		}
 	}
-	else {
-		//更新処理
-		Stage::GetInstance().Update();
-		Player::GetInstance().Update();
-		FishManager::GetInstance().Update();
-		Rod::GetInstance().Update();
-		Dobber::GetInstance().Update();
+	else 
+	{
+		// 更新処理
+		stage_->Update();
+		player_->Update();
+		fishmng_->Update();
+		rod_->Update();
+		dobber_->Update();
 		effect_->Update();
 		water_->Update();
+		camera_->Update();
 	}
 }
 
 void GameScene::Draw(void)
 {
-	//釣れてたらモデルだけ表示
-	if (Dobber::GetInstance().GetfishingFlg())
+	//　釣れてたらモデルだけ表示
+	if (dobber_->GetFishingFlg())
 	{
-		//魚が連れたら
-		DrawGraph(0, 0, backgroundimg, true);
-		MV1DrawModel(fishmodel);
+		//　魚が連れたら
+		DrawGraph(0, 0, backgroundImg_, true);
+		MV1DrawModel(fishModel);
 		// 魚の名前
-		SetFontSize(48);
-		DrawFormatString(0, 0, GetColor(0, 0, 0), fishname);
-		SetFontSize(16);
-		if (clearflg) {
-			DrawString(10, Application::SCREEN_SIZE_Y - 30, "おめでとう！激レア魚「ユーステノプテロン」を釣ることに成功した！", GetColor(255, 255, 255)); // 上
-			DrawString(10, Application::SCREEN_SIZE_Y - 15, "SPACEでタイトル画面に戻る", GetColor(255, 255, 255)); // 上
+		SetFontSize(FISH_NAME_FONT_SIZE);
+		DrawFormatString(0, 0, GetColor(0, 0, 0), fishName_);
+		SetFontSize(INFO_FONT_SIZE);
+		if (isClear_)
+		{
+			DrawString(TEXT_X, CLEAR_TEXT_Y,
+				"おめでとう！激レア魚「ユーステノプテロン」を釣ることに成功した！", GetColor(MAX_COLOR, MAX_COLOR, MAX_COLOR));
+			DrawString(TEXT_X, TEXT_Y,
+				"SPACEでタイトル画面に戻る", GetColor(MAX_COLOR, MAX_COLOR, MAX_COLOR));
 		}
-		else {
-			DrawString(10, Application::SCREEN_SIZE_Y - 50, "SPACEでゲーム画面に戻る", GetColor(255, 255, 255)); // 上
+		else
+		{
+			DrawString(TEXT_X, TEXT_Y,
+				"SPACEでゲーム画面に戻る", GetColor(MAX_COLOR, MAX_COLOR, MAX_COLOR));
 		}
 	}
-	else {
-		//連れてない場合
-		//描画処理
-		Stage::GetInstance().Draw();
-		Rod::GetInstance().Draw();
+	else 
+	{
+		// 釣れていない場合
+		// 描画処理
+		stage_->Draw();
+		rod_->Draw();
 		effect_->Draw();
-		FishManager::GetInstance().Draw();
-		Dobber::GetInstance().Draw();
+		fishmng_->Draw();
+		dobber_->Draw();
 		water_->Draw();
-		Player::GetInstance().Draw();
-		Gauge::GetInstance().Draw();
+		player_->Draw();
+		gauge_->Draw();
 		DrawString(0, 0, "目標：激レア魚「ユーステノプテロン」を釣ろう！", GetColor(0, 0, 0));
 	}
 	Text();
@@ -129,119 +210,77 @@ void GameScene::Draw(void)
 
 void GameScene::Release(void)
 {
-	//解放処理
-	Stage::GetInstance().Release();
-	Player::GetInstance().Release();
-	Rod::GetInstance().Release();
-	FishManager::GetInstance().Release();
-	Dobber::GetInstance().Release();
-	Gauge::GetInstance().Release();
+	// 解放処理
+	stage_->Release();
+	player_->Release();
+	rod_->Release();
+	fishmng_->Release();
+	dobber_->Release();
 	effect_->Release();
 	delete effect_;
 	water_->Release();
 	delete water_;
+	DeleteGraph(backgroundImg_);
 	camera_->Release();
-	delete camera_;
-	DeleteGraph(backgroundimg);
 }
 
 //ゲーム中のリセット処理
-void GameScene::Initialize(void)
+void GameScene::Reset(void)
 {
-	//魚関連
-	FishManager::GetInstance().Reset();
-	FishManager::GetInstance().Probability();
-	//ウキ関連
-	Dobber::GetInstance().Reset();
-	//竿関連
-	Rod::GetInstance().Reset();
-	//ゲージ関連
-	Gauge::GetInstance().Reset();
-	//プレイヤーを三人称に戻す
-	Player::GetInstance().SetCurrentMode(Player::THIRD_PERSON);
+	// 魚関連
+	fishmng_->Reset();
+	fishmng_->Probability();
+	// ウキ関連
+	dobber_->Reset();
+	// 竿関連
+	rod_->Reset();
+	// ゲージ関連
+	gauge_->Reset();
+	// プレイヤーを三人称に戻す
+	player_->SetCurrentMode(Player::THIRD_PERSON);
 }
 
 void GameScene::SetFish(int number)
 {
-	switch (number) {
-	case 1:
-		fishscale = 0.75f;
-		fishname = "アユ";
-		break;
-	case 2:
-		fishscale = 0.75f;
-		fishname = "ヤマメ";
-		break;
-	case 3:
-		fishscale = 0.75f;
-		fishname = "ハヤ";
-		break;
-	case 4:
-		fishscale = 0.5f;
-		fishname = "フナ";
-		break;
-	case 5:
-		fishscale = 0.5f;
-		fishname = "オイカワ";
-		break;
-	case 6:
-		fishscale = 5.0f;
-		fishname = "メダカ";
-		break;
-	case 7:
-		fishscale = 0.75f;
-		fishname = "カワムツ";
-		break;
-	case 8:
-		fishscale = 0.6f;
-		fishname = "イワナ";
-		break;
-	case 9:
-		fishscale = 0.2f;
-		fishname = "ポリプテルス";
-		break;
-	case 10:
-		fishscale = 0.3f;
-		fishname = "ニジマス";
-		break;
-	case 11:
-		fishscale = 0.5f;
-		fishname = "ウグイ";
-		break;
-	case 12:
-		fishscale = 0.5f;
-		fishname = "ワカサギ";
-		break;
-	case 13:
-		fishscale = 0.3f;
-		fishname = "ユーステノプテロン";
-		clearflg = true;
-		break;
-	default:
-		break;
+	if (number <= 0 || number >= static_cast<int>(std::size(fishInfos)))
+	{
+		// 範囲外の番号なら何もしない
+		return;
 	}
 
-	// モデルに関すること
-	fishmodel = FishManager::GetInstance().GetClosestFishModel();
-	VECTOR playerpos = Player::GetInstance().GetPos();
-	MV1SetPosition(fishmodel, playerpos);
-	MV1SetScale(fishmodel, { fishscale,fishscale,fishscale });
+	const FishInfo& fish = fishInfos[number];							// 番号に対応した魚情報を取得
+	fishScale_ = fish.scale;											// 魚の大きさを設定
+	fishName_ = fish.name;												// 魚の名前を設定
+	isClear_ = fish.isRare;												// 激レアかどうかのフラグをセット
+	fishModel = fishmng_->GetClosestFishModel();						// 魚の3Dモデルを取得
+	MV1SetPosition(fishModel, player_->GetPos());						// 魚モデルの位置をプレイヤー位置に合わせる
+	MV1SetScale(fishModel, { fishScale_, fishScale_, fishScale_ });		// 魚モデルのスケールを設定
 }
 
 void GameScene::Text(void)
 {
-	if (Rod::GetInstance().GetFlg()) {
-		if (Dobber::GetInstance().GetIsShot()) {
-			if (FishManager::GetInstance().GetFishHitFlg()) {
-				DrawExtendGraph(Application::SCREEN_SIZE_X / 2 - 400, Application::SCREEN_SIZE_Y / 2 - 150, 600, 300, fishonimg, true);
+	if (rod_->GetFlg())
+	{
+		if (dobber_->GetIsShot())
+		{
+			if (fishmng_->GetFishHitFlg())
+			{
+				DrawExtendGraph(
+					FISHON_X,
+					FISHON_Y,
+					FISHON_WIDTH, FISHON_HEIGHT,
+					fishOnImg_,
+					true);
 			}
 		}
-		else {
-			DrawExtendGraph(0, 50, 250, 100, ukispawnimg, true);
-			DrawString(0, 130, "矢印キーでウキを調整", 0xff0000);
+		else
+		{
+			DrawExtendGraph(0, GRAPH_Y, GRAPH_WEIGHT_, GRAPH_HEIGHT, ukiSpawnImg_, true);
+			DrawString(0, UKI_TEXT_Y, "矢印キーでウキを調整", 0xff0000);
 		}
 	}
-	else {
-		DrawExtendGraph(0, 50, 250, 100, rodspawnimg, true);
+	else
+	{
+		DrawExtendGraph(0, GRAPH_Y, GRAPH_WEIGHT_, GRAPH_HEIGHT, rodSpawnImg_, true);
 	}
 }

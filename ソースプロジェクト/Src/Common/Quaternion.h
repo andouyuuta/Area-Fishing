@@ -2,6 +2,7 @@
 #include <DxLib.h>
 #include <iostream>
 #include <algorithm>
+
 class Quaternion
 {
 

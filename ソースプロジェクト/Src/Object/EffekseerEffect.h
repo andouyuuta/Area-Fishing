@@ -1,5 +1,6 @@
 #pragma once
-#include<DxLib.h>
+#include <DxLib.h>
+
 class EffekseerEffect
 {
 public:

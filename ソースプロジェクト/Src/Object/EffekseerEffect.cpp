@@ -1,5 +1,5 @@
 #include "EffekseerEffect.h"
-#include"EffekseerForDXLib.h"
+#include "EffekseerForDXLib.h"
 
 EffekseerEffect::EffekseerEffect(void)
 {

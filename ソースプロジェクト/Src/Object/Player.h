@@ -11,84 +11,45 @@ public:
 		THIRD_PERSON,
 		FIRST_PERSON,
 	};
-	// インスタンスの生成
-	static void CreateInstance(void);
-	// インスタンスの取得
-	static Player& GetInstance(void);
 
-	Player(void);
-	~Player(void);
-	void Init(void);
-	void Update(void);
-	void Draw(void);
-	void Release(void);
-	[[nodiscard]] VECTOR GetPos(void) const { return playerpos_; }
+	Player(void);						// コンストラクタ
+	~Player(void);						// デストラクタ
+	void Init(Camera* camera);			// 初期化処理
+	void Update(void);					// 更新処理
+	void Draw(void);					// 描画処理
+	void Release(void);					// 解放処理
+	[[nodiscard]] VECTOR GetPos(void) const { return pos_; }
 	[[nodiscard]] VECTOR GetAngle(void) const { return rot_; }
-	[[nodiscard]] int GetModel(void) const { return playermodel_; }
+	[[nodiscard]] int GetModel(void) const { return playerModel_; }
 	[[nodiscard]] PlayerMode GetCurrentMode()const { return currentMode_; }
 	void SetCurrentMode(PlayerMode mode) { currentMode_ = mode; }
-	void SetCamera(Camera* camera) { camera_ = camera; }
 private:
-	// 静的インスタンス
-	static Player* instance_;
+	PlayerMode currentMode_;			// 現在のモード
+	int effectResourceHandle_;			// 川のエフェクト
+	int playingEffectHandle_;			// プレイヤーのエフェクト
+	int playerModel_;					// モデルID
 
-	PlayerMode currentMode_;
-	int effectResourceHandle;
-	int playingEffectHandle;
-	// モデルID
-	int playermodel_;
-	// アニメーションのアタッチ番号
-	int animAttachNo_;
-	int kamaerodAttachNo_;
-	int throwanimAttachNo_;
-	// アニメーションの総再生時間
-	float animTotalTime_;
-	float kamaerodTotalTime_;
-	float throwanimTotalTime_;
-	// 再生中のアニメーション時間
-	float currentAnimTime_;
-	float currentkamaeAnimTime_;
-	float currentthrowAnimTime_;
-	float movespeed = 0.0f;
-	//音関連
-	int boatSoundHundle;
-	int boatstopHundle;
-	bool isSoundPlaying;
-	int FallSoundHundle_;
-	int RiverSoundHundle_;
-	float previousTime = 0.0f;
-	bool keyFlg = false;
-	float RADIUS = 20000.0f;
-	// 表示座標
-	VECTOR playerpos_;	
-	VECTOR camerarot_;
-	VECTOR playerrot_;
-	//移動ベクトル
-	VECTOR moveVec_;
-	VECTOR moveRot_;
-	//移動ベクトルが生成する角度
-	VECTOR moveVecRad_;
-	//角度
-	VECTOR rot_;
-	//目標の回転角度
-	VECTOR targetRot_ = { 0.0f,0.0f,0.0f };
-	//調整用初期角度
-	VECTOR localRot_;
-	VECTOR scale_ = { 0.35f,0.35f,0.35f };
-	VECTOR SoundPos;
-	// アニメーション更新
-	void UpdateAnimation(void);
-	//移動更新
-	void UpdateMove(void);
-	//ベクトルの移動判定
-	bool IsMove(const VECTOR _moveVec);
-	//回転設定
-	void SetRotation(void);
-	//回転処理
-	void UpdateRotation(void);
-	float GetDeltaTime();
-	//キーが押されているか
-	bool IsAnyKeyPressed();
+	int animAttachNo_;					// アニメーションのアタッチ番号
+	float animTotalTime_;				// アニメーションの総再生時間
+	float currentAnimTime_;				// 再生中のアニメーション時間
+	float moveSpeed_;					// 動くスピード
+	// 音関連
+	int boatSoundHandle_;				// ボートの音
+	bool isSoundPlaying_;				// 音が出ているか
 
-	Camera* camera_ = nullptr;
+	VECTOR pos_;						// 表示座標
+	VECTOR moveVec_;					// 移動ベクトル
+	VECTOR rot_;						// 角度
+	VECTOR targetRot_ ;					// 目標の回転角度
+	VECTOR localRot_;					// 初期角度
+	VECTOR scale_;						// 大きさ
+
+	void UpdateAnimation(void);			// アニメーション更新
+	void UpdateMove(void);				// 移動更新
+	bool IsMove(const VECTOR _moveVec);	// ベクトルの移動判定
+	void SetRotation(void) const;		// 回転設定
+	void UpdateRotation(void);			// 回転処理
+	bool IsAnyKeyPressed();				// キーが押されているか
+
+	Camera* camera_;
 };

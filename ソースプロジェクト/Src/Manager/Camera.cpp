@@ -1,9 +1,22 @@
 #include "Camera.h"
 #include "../Application.h"
 #include "../Manager/InputManager.h"
+#include "../Manager/SceneManager.h"
 #include "../Utility/Utility.h"
 #include"../Object/Player.h"
 #include"../Object/Rod.h"
+#include"../Object/Rod.h"
+
+namespace
+{
+	// カメラの高さ
+	constexpr float HEIGHT = 200.0f;
+
+	// 追従対象からカメラまでの距離
+	constexpr float DIS_FOLLOW2CAMERA = 400.0f;
+
+	constexpr float ROT_SPEED_DEG = 1.0f;
+}
 
 Camera::Camera(void)
 {
@@ -13,8 +26,11 @@ Camera::~Camera(void)
 {
 }
 
-void Camera::Init(void)
+void Camera::Init(Rod* rod, Player* player)
 {
+	rod_ = rod;
+	player_ = player;
+
 	// カメラの初期位置
 	pos_ = { 0.0f,0.0f,0.0f };
 
@@ -36,33 +52,34 @@ void Camera::Init(void)
 void Camera::Update(void)
 {
 	auto& ins = InputManager::GetInstance();
-	Player& player = Player::GetInstance();
 
-	if (Rod::GetInstance().GetFlg()) {
-		currentMode_ = CameraMode::FIRST_PERSON;
-	}
-	else {
-		currentMode_ = CameraMode::THIRD_PERSON;
-	}
-
-	//カメラモードが切り替わった時
-	if (currentMode_ != prevMode_) {
-		localRotFromPlayer_ = player.GetAngle();
-		prevMode_ = currentMode_;
-	}
-
-	switch (currentMode_)
+	if (SceneManager::GetInstance().GetSceneID() == SceneManager::SCENE_ID::GAME)
 	{
-	case THIRD_PERSON:
-		ThirdCamera();
-		break;
-	case FIRST_PERSON:
-		FirstCamera();
-		break;
-	case TEST_:
-	default:
-		ThirdCamera();
-		break;
+		if (rod_->GetFlg()) {
+			currentMode_ = CameraMode::FIRST_PERSON;
+		}
+		else {
+			currentMode_ = CameraMode::THIRD_PERSON;
+		}
+
+		//カメラモードが切り替わった時
+		if (currentMode_ != prevMode_) {
+			localRotFromPlayer_ = player_->GetAngle();
+			prevMode_ = currentMode_;
+		}
+
+		switch (currentMode_)
+		{
+		case THIRD_PERSON:
+			ThirdCamera();
+			break;
+		case FIRST_PERSON:
+			FirstCamera();
+			break;
+		default:
+			ThirdCamera();
+			break;
+		}
 	}
 }
 
@@ -117,7 +134,7 @@ void Camera::ThirdCamera(void)
 	VECTOR localPos = VTransform(localPosFromThirdPlayer_, mat);
 
 	// プレイヤーの位置を取得（仮の関数）
-	VECTOR playerPos = Player::GetInstance().GetPos(); // 実際のプレイヤー位置取得関数に置き換えてください
+	VECTOR playerPos = player_->GetPos(); // 実際のプレイヤー位置取得関数に置き換えてください
 
 	// カメラのワールド座標を計算
 	pos_ = VAdd(playerPos, localPos);
@@ -162,10 +179,10 @@ void Camera::FirstCamera(void)
 	mat = MMult(mat, matRotY);
 
 	// プレイヤーからの相対位置を回転
-	VECTOR localPos = VTransform(localPosFromFirstPlayer_, mat);
+	VECTOR localPos = VTransform(localPosFromThirdPlayer_, mat);
 
 	// プレイヤーの位置を取得（仮の関数）
-	VECTOR playerPos = Player::GetInstance().GetPos(); // 実際のプレイヤー位置取得関数に置き換えてください
+	VECTOR playerPos = player_->GetPos(); // 実際のプレイヤー位置取得関数に置き換えてください
 
 	// カメラのワールド座標を計算
 	pos_ = VAdd(playerPos, localPos);

@@ -165,7 +165,7 @@
     <ClCompile Include="Src\Common\Quaternion.cpp" />
     <ClCompile Include="Src\Object\Player.cpp" />
     <ClCompile Include="Src\Object\Stage.cpp" />
-    <ClCompile Include="Src\Object\water.cpp" />
+    <ClCompile Include="Src\Object\Water.cpp" />
     <ClCompile Include="Src\Utility\Utility.cpp" />
     <ClCompile Include="Src\Manager\Camera.cpp" />
     <ClCompile Include="Src\Common\Fader.cpp" />
@@ -189,7 +189,7 @@
     <ClInclude Include="Src\Common\Quaternion.h" />
     <ClInclude Include="Src\Object\Player.h" />
     <ClInclude Include="Src\Object\Stage.h" />
-    <ClInclude Include="Src\Object\water.h" />
+    <ClInclude Include="Src\Object\Water.h" />
     <ClInclude Include="Src\Utility\Utility.h" />
     <ClInclude Include="Src\Manager\Camera.h" />
     <ClInclude Include="Src\Common\Fader.h" />

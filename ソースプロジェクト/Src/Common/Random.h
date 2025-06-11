@@ -2,7 +2,8 @@
 #include <random>
 #include <DxLib.h>
 
-class Random {
+class Random 
+{
 public:
     // シングルトンインスタンスの取得
     static Random& GetInstance() {

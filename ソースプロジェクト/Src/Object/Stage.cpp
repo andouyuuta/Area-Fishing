@@ -2,38 +2,42 @@
 #include "../Utility/Utility.h"
 #include "Stage.h"
 
-Stage* Stage::instance_ = nullptr;
-
-void Stage::CreateInstance()
+namespace
 {
-	if (instance_ == nullptr)
-	{
-		instance_ = new Stage();
-	}
-	instance_->Init();
-}
+	// モデル・サウンドパス
+	static constexpr const char* STAGE_MODEL_PATH = "Data/Model/Stage/LAKE.mv1";
+	static constexpr const char* BACKGROUND_MODEL_PATH = "Data/Model/Stage/background.mv1";
+	static constexpr const char* WINDMILL_MODEL_PATH = "Data/Model/Stage/huusyanohane.mv1";
+	static constexpr const char* BIRD_SOUND_PATH = "Data/Sound/bird.mp3";
+	static constexpr const char* FALL_SOUND_PATH = "Data/Sound/waterfal.mp3";
 
-Stage& Stage::GetInstance(void)
-{
-	return *instance_;
-}
+	// モデルの位置・スケール
+	static constexpr VECTOR STAGE_POS = { 0.0f, -600.0f, 0.0f };
+	static constexpr VECTOR STAGE_SCALE = { 0.75f, 0.75f, 0.75f };
+	static constexpr VECTOR BG_SCALE = { 23.0f, 23.0f, 23.0f };
+	static constexpr VECTOR WINDMILL_POS = { 180.0f, 300.0f, -650.0f };
 
+	// サウンドの位置
+	static constexpr VECTOR SOUND_POS = { 0.0f, 0.0f, 21000.0f };
+
+	// その他定数
+	static constexpr float WINDMILL_ROTATION_SPEED_DEG = 0.4f;
+}
 
 Stage::Stage(void)
+	: fallSoundHandle_(-1),
+	soundPos_(SOUND_POS),
+	backGroundModel_(-1),
+	backGroundPos_{ 0.0f, 0.0f, 0.0f },
+	backGroundScale_(BG_SCALE),
+	envSoundHandle_(-1),
+	stageModel_(-1),
+	stagePos_(STAGE_POS),
+	stageScale_(STAGE_SCALE),
+	windmillModel_(-1),
+	windmillPos_(WINDMILL_POS),
+	windmillRot_{ 0.0f, 0.0f, 0.0f }
 {
-	FallSoundHundle_ = -1;
-	RiverSoundHundle_ = -1;
-	SoundPos = { 0.0f,0.0f,0.0f }
-	; background_ = -1;
-	backgroundpos_ = { 0.0f,0.0f,0.0f };
-	envSoundHundle_ = -1;
-	stagemodel_ = -1;
-	stagepos_ = { 0.0f,0.0f,0.0f };
-	watermodel_ = -1;
-	waterpos_ = { 0.0f,0.0f,0.0f };
-	windmillmodel_ = -1;
-	windmillpos_ = { 0.0,0.0f,0.0f };
-	windmillrot_ = { 0.0f,0.0f,0.0f };
 }
 
 Stage::~Stage(void)
@@ -43,76 +47,65 @@ Stage::~Stage(void)
 void Stage::Init(void)
 {
 	// ステージモデルの読み込み
-	stagemodel_ = MV1LoadModel("Data/Model/Stage/LAKE.mv1");
-	background_ = MV1LoadModel("Data/Model/Stage/background.mv1");
-	windmillmodel_ = MV1LoadModel("Data/Model/Stage/huusyanohane.mv1");
-	envSoundHundle_ = LoadSoundMem("Data/Sound/bird.mp3");
+	stageModel_ = MV1LoadModel(STAGE_MODEL_PATH);
+	backGroundModel_ = MV1LoadModel(BACKGROUND_MODEL_PATH);
+	windmillModel_ = MV1LoadModel(WINDMILL_MODEL_PATH);
+	envSoundHandle_ = LoadSoundMem(BIRD_SOUND_PATH);
 
 	SetCreate3DSoundFlag(TRUE);
-	FallSoundHundle_ = LoadSoundMem("Data/Sound/waterfal.mp3");
+	fallSoundHandle_ = LoadSoundMem(FALL_SOUND_PATH);
 
-	SoundPos = { 0.0f,0.0f,21000.0f };
+	Set3DPositionSoundMem(soundPos_, fallSoundHandle_);
 
-	Set3DPositionSoundMem(SoundPos, FallSoundHundle_);
-
-	Set3DRadiusSoundMem(RADIUS, FallSoundHundle_);
-
-	// モデルの位置
-	stagepos_ = { 0.0f, -600.0f, 0.0f };
-	windmillpos_ = { 180.0f,300.0f,-650.0f };
-
-	backgroundpos_ = { 0.0f,0.0f,0.0f };
-
-	windmillrot_ = { 0.0f,0.0f,0.0f };
+	Set3DRadiusSoundMem(RADIUS, fallSoundHandle_);
 
 	// モデルの位置を設定
-	MV1SetPosition(stagemodel_, stagepos_);
-	MV1SetPosition(background_, backgroundpos_);
-	MV1SetPosition(windmillmodel_, windmillpos_);
-	MV1SetPosition(watermodel_, waterpos_);
-	MV1SetRotationXYZ(windmillmodel_, windmillrot_);
-	MV1SetScale(windmillmodel_, scale);
-	MV1SetScale(stagemodel_, scale);
-	MV1SetScale(watermodel_, { 100.0f,0.5f,100.0f });
-	MV1SetScale(background_, { 23.0f,23.0f,23.0f });
+	MV1SetPosition(stageModel_, stagePos_);
+	MV1SetPosition(backGroundModel_, backGroundPos_);
+	MV1SetPosition(windmillModel_, windmillPos_);
+	MV1SetRotationXYZ(windmillModel_, windmillRot_);
+	MV1SetScale(windmillModel_, stageScale_);
+	MV1SetScale(stageModel_, stageScale_);
+	MV1SetScale(backGroundModel_, backGroundScale_);
 
-	MV1SetupCollInfo(stagemodel_, -1, 8, 8, 8);
+	MV1SetupCollInfo(stageModel_, -1, 8, 8, 8);
 }
 
 void Stage::Update(void)
 {
-	WindmillMove();
-	if (CheckSoundMem(FallSoundHundle_) == 0) {
-		PlaySoundMem(FallSoundHundle_, DX_PLAYTYPE_LOOP);
+	WindmillMove(); //	風車回転
+	if (CheckSoundMem(fallSoundHandle_) == 0) 
+	{
+		PlaySoundMem(fallSoundHandle_, DX_PLAYTYPE_LOOP);
 	}
 
-	if (CheckSoundMem(envSoundHundle_) == 0) {
-		PlaySoundMem(envSoundHundle_, DX_PLAYTYPE_LOOP);
+	if (CheckSoundMem(envSoundHandle_) == 0) 
+	{
+		PlaySoundMem(envSoundHandle_, DX_PLAYTYPE_LOOP);
 	}
 }
 
 void Stage::Draw(void)
 {
-	MV1DrawModel(stagemodel_);
-	MV1SetMaterialDrawBlendMode(stagemodel_, 128, DX_BLENDMODE_ADD);
-	MV1DrawModel(windmillmodel_);
+	MV1DrawModel(stageModel_);
+	MV1SetMaterialDrawBlendMode(stageModel_, 128, DX_BLENDMODE_ADD);
+	MV1DrawModel(windmillModel_);
 	
-	MV1DrawModel(background_);
+	MV1DrawModel(backGroundModel_);
 }
 
 void Stage::Release(void)
 {
-	MV1DeleteModel(stagemodel_);
-	MV1DeleteModel(background_);
-	MV1DeleteModel(windmillmodel_);
+	MV1DeleteModel(stageModel_);
+	MV1DeleteModel(backGroundModel_);
+	MV1DeleteModel(windmillModel_);
 	
-	DeleteSoundMem(FallSoundHundle_);
-	DeleteSoundMem(envSoundHundle_);
-
+	DeleteSoundMem(fallSoundHandle_);
+	DeleteSoundMem(envSoundHandle_);
 }
 
 void Stage::WindmillMove(void)
 {
-	windmillrot_.x += Utility::Deg2RadF(0.4f);
-	MV1SetRotationXYZ(windmillmodel_, windmillrot_);
+	windmillRot_.x += Utility::Deg2RadF(WINDMILL_ROTATION_SPEED_DEG);
+	MV1SetRotationXYZ(windmillModel_, windmillRot_);
 }

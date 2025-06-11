@@ -13,17 +13,15 @@ int Utility::Round(float v)
 
 std::vector<std::string> Utility::Split(std::string& line, char delimiter)
 {
-
     std::istringstream stream(line);
     std::string field;
     std::vector<std::string> result;
     
-    while (getline(stream, field, delimiter)) {
+    while (getline(stream, field, delimiter))
+    {
         result.push_back(field);
     }
-
     return result;
-
 }
 
 double Utility::Rad2DegD(double rad)
@@ -78,16 +76,12 @@ double Utility::RadIn2PI(double rad)
 
 int Utility::DirNearAroundRad(float from, float to)
 {
-
     float ret = 1.0f;
-
     float diff = to - from;
 
     if (diff >= 0.0f)
     {
-
         // 比較元よりも時計回りに位置する
-
         if (diff > DX_PI_F)
         {
             // でも、180度以上離れているので、反時計回りの方が近い
@@ -98,13 +92,10 @@ int Utility::DirNearAroundRad(float from, float to)
             // 時計回り
             ret = 1.0f;
         }
-
     }
     else
     {
-
         // 比較元よりも反時計回りに位置する
-
         if (diff < -DX_PI_F)
         {
             // でも、180度以上離れているので、時計回りの方が近い
@@ -117,23 +108,17 @@ int Utility::DirNearAroundRad(float from, float to)
         }
 
     }
-
     return static_cast<int>(ret);
-
 }
 
 int Utility::DirNearAroundDeg(float from, float to)
 {
-
     float ret = 1.0f;
-
     float diff = to - from;
 
     if (diff >= 0.0f)
     {
-
         // 比較元よりも時計回りに位置する
-
         if (diff > 180.0f)
         {
             // でも、180度以上離れているので、反時計回りの方が近い
@@ -144,13 +129,10 @@ int Utility::DirNearAroundDeg(float from, float to)
             // 時計回り
             ret = 1.0f;
         }
-
     }
     else
     {
-
         // 比較元よりも反時計回りに位置する
-
         if (diff < -180.0f)
         {
             // でも、180度以上離れているので、時計回りの方が近い
@@ -161,11 +143,8 @@ int Utility::DirNearAroundDeg(float from, float to)
             // 反時計回り
             ret = -1.0f;
         }
-
     }
-
     return static_cast<int>(ret);
-
 }
 
 int Utility::Lerp(int start, int end, float t)
@@ -239,7 +218,6 @@ VECTOR Utility::Lerp(const VECTOR& start, const VECTOR& end, float t)
 
 double Utility::LerpDeg(double start, double end, double t)
 {
-
     double ret;
 
     double diff = end - start;
@@ -267,7 +245,6 @@ double Utility::LerpDeg(double start, double end, double t)
     }
 
     return ret;
-
 }
 
 COLOR_F Utility::Lerp(const COLOR_F& start, const COLOR_F& end, float t)
@@ -491,8 +468,6 @@ double Utility::AngleDeg(const VECTOR& from, const VECTOR& to)
         return 0.0f;
     }
 
-    //float dot = std::clamp(Dot(from, to) / denominator, -1.0f, 1.0f);
-    //auto dot = Dot(from, to) / denominator;
     auto dot = VDot(from, to) / denominator;
     if (dot < -1.0f)
     {
